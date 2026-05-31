@@ -29,7 +29,6 @@
     <script type="text/babel" data-type="module">
         const { useState, useEffect, useMemo } = React;
 
-        // --- FIREBASE IMPORTS (Vía CDN Modular) ---
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getFirestore, collection, doc, setDoc, onSnapshot, serverTimestamp, addDoc, deleteDoc, writeBatch } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
@@ -80,6 +79,7 @@
             { id: 'variedad', label: 'V. Variedad de Estilo', max: 2, section: 'Habilidades' },
         ];
 
+        // Penalizaciones ajustadas con valores en múltiplos de 0.05 y 0.10
         const DEDUCTIONS_LIST = [
             { id: 'miembros_inicio', label: 'Miembros no en escenario al inicio', value: 1.00 },
             { id: 'caida_mayor', label: 'Caída grado mayor', value: 0.10 },
@@ -347,7 +347,6 @@
                     )}
 
                     <main className="max-w-2xl mx-auto p-5">
-                        {}
                         {view === 'categories' && (
                             <div className="space-y-6 animate-in">
                                 <h2 className="text-xl font-black text-slate-800 flex items-center gap-3 px-2 uppercase tracking-tight leading-none">Categorías</h2>
@@ -362,7 +361,6 @@
                             </div>
                         )}
 
-                        {}
                         {view === 'groups' && (
                             <div className="space-y-6 animate-in">
                                 <button onClick={() => setView('categories')} className="flex items-center gap-2 text-indigo-600 font-black text-[10px] uppercase mb-4 tracking-widest"><ChevronLeft size={16}/> Volver</button>
@@ -532,7 +530,6 @@
                             </div>
                         )}
 
-                        {}
                         {view === 'success' && (
                             <div className="py-20 text-center animate-in zoom-in">
                                 <div className="bg-green-100 text-green-600 w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-8 shadow-inner shadow-green-200/50"><CheckCircle2 size={56} /></div>
