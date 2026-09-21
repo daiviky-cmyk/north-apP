@@ -1,785 +1,516 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>North Champions 2026</title>
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- React & ReactDOM CDNs -->
-    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    <!-- Babel for JSX -->
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
-        body { font-family: 'Inter', sans-serif; }
-        .animate-in { animation: fadeIn 0.5s ease-out; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-track { background: #0f172a; }
-        ::-webkit-scrollbar-thumb { background: #4f46e5; border-radius: 10px; }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>North Champions 2026</title>
+  
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
 </head>
-<body class="bg-slate-50">
-    <div id="root"></div>
+<body class="bg-slate-900 text-slate-100 min-h-screen">
+  <div id="root"></div>
 
-    <script type="text/babel" data-type="module" data-presets="react">
-        const { useState, useEffect, useMemo } = React;
+  <script type="text/babel">
+    const { useState, useEffect, useMemo, useRef } = React;
 
-        // --- FIREBASE IMPORTS (Vía CDN Modular) ---
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getFirestore, collection, doc, setDoc, onSnapshot, serverTimestamp, addDoc, deleteDoc, writeBatch } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    const GOOGLE_SHEETS_URL = "https://script.google.com/macros/s/AKfycbwWErMfb1kwoJgsmhXtdO8BDe_Kkez8m0V4ZF-Aiu3WDq-SwNc-oxBUiv1FuBh3Z2D2/exec";
+    const LOGO_URL = "./logo.png"; 
 
-        // --- ICONOS SVG ---
-        const Icon = ({ path, size = 24, className = "" }) => (
-            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-                {path}
-            </svg>
-        );
-
-        const Trophy = (props) => <Icon {...props} path={<><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 22V18"/><path d="M14 22V18"/><path d="M18 4H6v7a6 6 0 0 0 12 0V4Z"/></>} />;
-        const Database = (props) => <Icon {...props} path={<><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5V19A9 3 0 0 0 21 19V5"/><path d="M3 12A9 3 0 0 0 21 12"/></>} />;
-        const LogOut = (props) => <Icon {...props} path={<><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></>} />;
-        const Cloud = (props) => <Icon {...props} path={<path d="M17.5 19a5.5 5.5 0 0 0 2.5-10.5 8.5 8.5 0 1 0-15.5 1.5A5.5 5.5 0 0 0 4.5 19Z"/>} />;
-        const ChevronRight = (props) => <Icon {...props} path={<polyline points="9 18 15 12 9 6"/>} />;
-        const ChevronLeft = (props) => <Icon {...props} path={<polyline points="15 18 9 12 15 6"/>} />;
-        const CheckCircle2 = (props) => <Icon {...props} path={<><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/><path d="m9 12 2 2 4-4"/></>} />;
-        const MinusCircle = (props) => <Icon {...props} path={<><circle cx="12" cy="12" r="10"/><line x1="8" x2="16" y1="12" y2="12"/></>} />;
-        const UserPlus = (props) => <Icon {...props} path={<><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" x2="19" y1="8" y2="14"/><line x1="16" x2="22" y1="11" y2="11"/></>} />;
-        const Plus = (props) => <Icon {...props} path={<><line x1="12" x2="12" y1="5" y2="19"/><line x1="5" x2="19" y1="12" y2="12"/></>} />;
-        const ClipboardList = (props) => <Icon {...props} path={<><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4"/><path d="M12 16h4"/><path d="M8 11h.01"/><path d="M8 16h.01"/></>} />;
-        const UploadCloud = (props) => <Icon {...props} path={<><path d="m16 13-4-4-4 4"/><path d="M12 9v9"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/><path d="M12 13v9"/></>} />;
-        const Trash2 = (props) => <Icon {...props} path={<><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 2-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></>} />;
-        const Users = (props) => <Icon {...props} path={<><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></>} />;
-        const Search = (props) => <Icon {...props} path={<><circle cx="11" cy="11" r="8"/><line x1="21" x2="16.65" y1="21" y2="16.65"/></>} />;
-        const BarChart3 = (props) => <Icon {...props} path={<><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></>} />;
-        const Mic = (props) => <Icon {...props} path={<><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></>} />;
-        const Square = (props) => <Icon {...props} path={<rect width="18" height="18" x="3" y="3" rx="2"/>} />;
-
-        const firebaseConfig = {
+    // CONFIGURACIÓN REAL DE FIREBASE
+    const firebaseConfig = {
       apiKey: "AIzaSyCLW7tZxGuecMGa7FgWuvGMcxi4x_5wD7w",
       authDomain: "north-champions-2026.firebaseapp.com",
       projectId: "north-champions-2026",
       storageBucket: "north-champions-2026.firebasestorage.app",
       messagingSenderId: "14904881173",
       appId: "1:14904881173:web:97937bc54d5d309155f81c"
-            };
+    };
 
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'north-champions-2026';
-        const GOOGLE_SHEETS_URL = "https://script.google.com/macros/s/AKfycbz9gIOK2Qu5Jp5pwoEvrCAryFXtFdELR_ubpHxYw9DAGttXAIz3rutlkylP0H9LBLgH/exec";
+    if (!firebase.apps.length) {
+      firebase.initializeApp(firebaseConfig);
+    }
+    const db = firebase.firestore();
+    const auth = firebase.auth();
 
-        const LOGO_URL = "NORTH-26-JUJUY_1.jpg";
+    const CRITERIA = [
+      { id: 'creatividad', label: '1. Creatividad', max: 2 },
+      { id: 'escenario', label: '2. Escenario, Espacio y Transiciones', max: 2 },
+      { id: 'intensidad', label: '3. Intensidad, Proyección y Presencia', max: 2 },
+      { id: 'imagen', label: '4. Imagen Urbana', max: 2 },
+      { id: 'entretenimiento', label: '5. Entretenimiento / Atracción', max: 2 },
+      { id: 'musicalidad', label: 'I. Musicalidad', max: 2 },
+      { id: 'sincronizacion', label: 'II. Sincronización', max: 2 },
+      { id: 'ejecucion', label: 'III. Ejecución', max: 2 },
+      { id: 'dificultad', label: 'IV. Dificultad Estilos Urbanos', max: 2 },
+      { id: 'variedad', label: 'V. Variedad de Estilo', max: 2 }
+    ];
 
-        const CRITERIA = [
-            { id: 'creatividad', label: '1. Creatividad', max: 2, section: 'Desempeño' },
-            { id: 'escenario', label: '2. Escenario, Espacio y Transiciones', max: 2, section: 'Desempeño' },
-            { id: 'intensidad', label: '3. Intensidad, Proyección y Presencia', max: 2, section: 'Desempeño' },
-            { id: 'imagen', label: '4. Imagen Urbana', max: 2, section: 'Desempeño' },
-            { id: 'entretenimiento', label: '5. Entretenimiento / Atracción', max: 2, section: 'Desempeño' },
-            { id: 'musicalidad', label: 'I. Musicalidad', max: 2, section: 'Habilidades' },
-            { id: 'sincronizacion', label: 'II. Sincronización', max: 2, section: 'Habilidades' },
-            { id: 'ejecucion', label: 'III. Ejecución', max: 2, section: 'Habilidades' },
-            { id: 'dificultad', label: 'IV. Dificultad Estilos Urbanos', max: 2, section: 'Habilidades' },
-            { id: 'variedad', label: 'V. Variedad de Estilo', max: 2, section: 'Habilidades' },
-        ];
+    const DEDUCTIONS_LIST = [
+      { id: 'miembros_inicio', label: 'Miembros no en escenario al inicio', value: 1.00 },
+      { id: 'caida_mayor', label: 'Caída grado mayor', value: 0.10 },
+      { id: 'caida_menor', label: 'Caída grado menor', value: 0.05 },
+      { id: 'reinicios_rutina', label: 'Reinicio de rutina', value: 1.00 },
+      { id: 'fuera_tiempo', label: 'Duración fuera de tiempo', value: 1.00 },
+      { id: 'lenguaje_inapropiado', label: 'Lenguaje inapropiado', value: 0.05 },
+      { id: 'gestos_obscenos', label: 'Gestos obscenos', value: 0.10 },
+      { id: 'vestimenta_inapropiada', label: 'Vestimenta inapropiada', value: 0.05 },
+      { id: 'pinturas_confeti', label: 'Uso de pinturas/confeti', value: 1.00 },
+      { id: 'accesorios_lanzados', label: 'Ropa/accesorios lanzados', value: 0.10 }
+    ];
 
-        const DEDUCTIONS_LIST = [
-            { id: 'miembros_inicio', label: 'Miembros no en escenario al inicio', value: 1.00 },
-            { id: 'caida_mayor', label: 'Caída grado mayor', value: 0.10 },
-            { id: 'caida_menor', label: 'Caída grado menor', value: 0.05 },
-            { id: 'reinicio', label: 'Reinicio de rutina', value: 1.00 },
-            { id: 'fuera_tiempo', label: 'Duración fuera de tiempo', value: 1.00 },
-            { id: 'lenguaje_inapropiado', label: 'Lenguaje inapropiado', value: 0.05 },
-            { id: 'gestos_obscenos', label: 'Gestos obscenos', value: 0.10 },
-            { id: 'vestimenta_inapropiada', label: 'Vestimenta inapropiada', value: 0.05 },
-            { id: 'pinturas_confeti', label: 'Uso de pinturas/confeti', value: 1.00 },
-            { id: 'accesorios_lanzados', label: 'Ropa/accesorios lanzados', value: 0.10 },
-        ];
+    const JURADOS = [
+      { id: 'juez1', name: 'Jurado 1', pass: 'dance101' },
+      { id: 'juez2', name: 'Jurado 2', pass: 'dance202' },
+      { id: 'juez3', name: 'Jurado 3', pass: 'dance303' },
+      { id: 'admin', name: 'Administrador', pass: 'master99' }
+    ];
 
-        const JURADOS = [
-            { id: 'juez1', name: 'Jurado 1', pass: 'dance101' },
-            { id: 'juez2', name: 'Jurado 2', pass: 'dance202' },
-            { id: 'juez3', name: 'Jurado 3', pass: 'dance303' },
-            { id: 'admin', name: 'Administrador', pass: 'master99' },
-        ];
+    const CATEGORIAS = [
+      'Solista', 'Dúo/Trío', 'Solista Juvenil', 'Pre Junior', 'Junior',
+      'Varsity', 'Adult', 'Mini Crew Kids', 'Mini Crew', 'Mega Kids', 'Mega Crew'
+    ];
 
-        const CATEGORIAS = [
-            'Solista kids', 'Solista Juvenil', 'Pre Junior', 'Junior', 'Varsity', 'Adult', 'Mini Crew Kids', 'Mini Crew', 'Mega Kids', 'Mega Crew'
-        ];
+    function App() {
+      const [currentUserData, setCurrentUserData] = useState(null);
+      const [password, setPassword] = useState("");
+      const [view, setView] = useState('login'); 
+      const [message, setMessage] = useState(null);
 
-        function App() {
-            const [user, setUser] = useState(null);
-            const [loading, setLoading] = useState(false);
-            const [dataLoaded, setDataLoaded] = useState(true);
-            const [currentUserData, setCurrentUserData] = useState(null);
-            const [password, setPassword] = useState('');
-            const [view, setView] = useState('login'); 
-            const [scores, setScores] = useState([]);
-            const [participants, setParticipants] = useState([]);
-            const [selectedCategory, setSelectedCategory] = useState(null);
-            const [selectedGroup, setSelectedGroup] = useState(null);
-            const [formScores, setFormScores] = useState({}); 
-            const [formDeductions, setFormDeductions] = useState({}); 
-            const [message, setMessage] = useState(null);
-            const [timerRemaining, setTimerRemaining] = useState(0);
-            const [searchTerm, setSearchTerm] = useState('');
-            const [newParticipantName, setNewParticipantName] = useState('');
-            const [bulkList, setBulkList] = useState('');
-            const [currentCategory, setCurrentCategory] = useState(CATEGORIAS[0]);
+      const [selectedCategory, setSelectedCategory] = useState(null);
+      const [selectedGroup, setSelectedGroup] = useState(null);
 
-            // Grabación de voz (Hasta 4 minutos = 240 seg)
-            const [isRecording, setIsRecording] = useState(false);
-            const [recordingTime, setRecordingTime] = useState(0);
-            const [audioBase64, setAudioBase64] = useState(null);
-            const [mediaRecorder, setMediaRecorder] = useState(null);
+      const [participants, setParticipants] = useState([]);
+      const [scores, setScores] = useState([]);
 
-            const MAX_RECORDING_TIME = 240;
+      const [formScores, setFormScores] = useState({});
+      const [formDeductions, setFormDeductions] = useState({});
 
-            useEffect(() => {
-                let timer;
-                if (isRecording) {
-                    timer = setInterval(() => {
-                        setRecordingTime(prev => {
-                            if (prev >= MAX_RECORDING_TIME - 1) {
-                                stopRecording();
-                                return MAX_RECORDING_TIME;
-                            }
-                            return prev + 1;
-                        });
-                    }, 1000);
-                } else {
-                    setRecordingTime(0);
-                }
-                return () => clearInterval(timer);
-            }, [isRecording]);
+      const [isRecording, setIsRecording] = useState(false);
+      const [recordingTime, setRecordingTime] = useState(0);
+      const [audioBase64, setAudioBase64] = useState(null);
+      const mediaRecorderRef = useRef(null);
+      const audioChunksRef = useRef([]);
 
-            const startRecording = async () => {
-                try {
-                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                    const recorder = new MediaRecorder(stream);
-                    const chunks = [];
-                    
-                    recorder.ondataavailable = (e) => {
-                        if (e.data.size > 0) chunks.push(e.data);
-                    };
+      const [singleName, setSingleName] = useState("");
+      const [bulkList, setBulkList] = useState("");
+      const [currentCategory, setCurrentCategory] = useState(CATEGORIAS[0]);
 
-                    recorder.onstop = () => {
-                        const blob = new Blob(chunks, { type: 'audio/webm' });
-                        const reader = new FileReader();
-                        reader.readAsDataURL(blob);
-                        reader.onloadend = () => {
-                            setAudioBase64(reader.result);
-                        };
-                        stream.getTracks().forEach(track => track.stop());
-                    };
+      useEffect(() => {
+        auth.signInAnonymously().catch(err => console.log("Firebase Auth:", err));
+      }, []);
 
-                    recorder.start();
-                    setMediaRecorder(recorder);
-                    setIsRecording(true);
-                    setRecordingTime(0);
-                } catch (err) {
-                    showMessage('Error al acceder al micrófono', 'error');
-                }
-            };
+      // Sincronización en tiempo real para todos los dispositivos
+      useEffect(() => {
+        const unsubParticipants = db.collection('participants').onSnapshot(snap => {
+          const list = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+          setParticipants(list);
+        });
 
-            const stopRecording = () => {
-                if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-                    mediaRecorder.stop();
-                    setIsRecording(false);
-                }
-            };
+        const unsubScores = db.collection('scores').onSnapshot(snap => {
+          const list = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+          setScores(list);
+        });
 
-            const discardAudio = () => {
-                setAudioBase64(null);
-                setRecordingTime(0);
-            };
+        return () => {
+          unsubParticipants();
+          unsubScores();
+        };
+      }, []);
 
-            useEffect(() => {
-                const initAuth = async () => {
-                    try {
-                        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                            await signInWithCustomToken(auth, __initial_auth_token);
-                        } else {
-                            await signInAnonymously(auth);
-                        }
-                    } catch (err) { 
-                        console.error("Autenticación modo libre:", err);
-                    }
-                };
-                initAuth();
-                const unsubscribe = onAuthStateChanged(auth, (u) => {
-                    setUser(u);
-                });
-                return () => unsubscribe();
-            }, []);
+      useEffect(() => {
+        if (window.lucide) window.lucide.createIcons();
+      });
 
-            useEffect(() => {
-                if (!user) return;
-                
-                const unsubScores = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'scores'), (snap) => {
-                    setScores(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-                }, (err) => console.log("Scores snapshot info", err));
+      useEffect(() => {
+        let interval;
+        if (isRecording) {
+          interval = setInterval(() => {
+            setRecordingTime(prev => prev >= 240 ? (stopRecording(), 240) : prev + 1);
+          }, 1000);
+        } else {
+          setRecordingTime(0);
+        }
+        return () => clearInterval(interval);
+      }, [isRecording]);
 
-                const unsubParticipants = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'participants'), (snap) => {
-                    setParticipants(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-                }, (err) => console.log("Participants snapshot info", err));
+      const showMessage = (text, type = 'success') => {
+        setMessage({ text, type });
+        setTimeout(() => setMessage(null), 3500);
+      };
 
-                return () => { unsubScores(); unsubParticipants(); };
-            }, [user]);
+      const handleLogin = (e) => {
+        e.preventDefault();
+        const found = JURADOS.find(j => j.pass === password);
+        if (found) {
+          setCurrentUserData(found);
+          setPassword("");
+          setView(found.id === 'admin' ? 'admin' : 'categories');
+        } else {
+          showMessage("Contraseña incorrecta", "error");
+        }
+      };
 
-            useEffect(() => {
-                let interval;
-                if (timerRemaining > 0) {
-                    interval = setInterval(() => setTimerRemaining(prev => prev - 1), 1000);
-                } else if (timerRemaining === 0 && view === 'success') {
-                    setView('categories');
-                    setSelectedGroup(null);
-                }
-                return () => clearInterval(interval);
-            }, [timerRemaining, view]);
+      // Guardar participante en Firebase
+      const handleAddSingle = async () => {
+        if (!singleName.trim()) return;
+        try {
+          await db.collection('participants').add({
+            name: singleName.trim(),
+            category: currentCategory,
+            createdAt: new Date().toISOString()
+          });
+          setSingleName("");
+          showMessage("Participante agregado con éxito");
+        } catch (err) {
+          showMessage("Error al guardar participante", "error");
+        }
+      };
 
-            const handleLogin = () => {
-                const found = JURADOS.find(j => j.pass === password);
-                if (found) {
-                    setCurrentUserData(found);
-                    setView(found.id === 'admin' ? 'admin' : 'categories');
-                    setPassword('');
-                    showMessage(`Bienvenido, ${found.name}`);
-                } else { showMessage('Contraseña incorrecta', 'error'); }
-            };
+      // Carga Masiva a Firebase
+      const handleBulkAdd = async () => {
+        const lines = bulkList.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+        if (lines.length === 0) return;
+        try {
+          const batch = db.batch();
+          lines.forEach(name => {
+            const ref = db.collection('participants').doc();
+            batch.set(ref, {
+              name,
+              category: currentCategory,
+              createdAt: new Date().toISOString()
+            });
+          });
+          await batch.commit();
+          setBulkList("");
+          showMessage(`Se agregaron ${lines.length} participantes`);
+        } catch (err) {
+          showMessage("Error al cargar participantes", "error");
+        }
+      };
 
-            const showMessage = (text, type = 'success') => {
-                setMessage({ text, type });
-                setTimeout(() => setMessage(null), 3000);
-            };
+      const handleDeleteParticipant = async (id) => {
+        if (confirm("¿Eliminar este participante?")) {
+          try {
+            await db.collection('participants').doc(id).delete();
+            showMessage("Participante eliminado");
+          } catch (err) {
+            showMessage("Error al eliminar", "error");
+          }
+        }
+      };
 
-            const totals = useMemo(() => {
-                const base = CRITERIA.reduce((acc, c) => {
-                    const scoreVal = formScores[c.id];
-                    if (scoreVal === undefined || scoreVal === null || scoreVal === "") return acc;
-                    const parsed = parseFloat(scoreVal);
-                    return acc + (isNaN(parsed) ? 0 : parsed);
-                }, 0);
-                const deductions = DEDUCTIONS_LIST.reduce((acc, d) => acc + (formDeductions[d.id] ? d.value : 0), 0);
-                return { 
-                    base: parseFloat(base.toFixed(2)), 
-                    deductions: parseFloat(deductions.toFixed(2)), 
-                    final: Math.max(0, parseFloat((base - deductions).toFixed(2))) 
-                };
-            }, [formScores, formDeductions]);
+      const startRecording = async () => {
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          mediaRecorderRef.current = new MediaRecorder(stream);
+          audioChunksRef.current = [];
+          mediaRecorderRef.current.ondataavailable = (e) => {
+            if (e.data.size > 0) audioChunksRef.current.push(e.data);
+          };
+          mediaRecorderRef.current.onstop = () => {
+            const blob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+            const reader = new FileReader();
+            reader.readAsDataURL(blob);
+            reader.onloadend = () => setAudioBase64(reader.result);
+            stream.getTracks().forEach(t => t.stop());
+          };
+          mediaRecorderRef.current.start();
+          setIsRecording(true);
+        } catch (err) {
+          showMessage("No se pudo acceder al micrófono", "error");
+        }
+      };
 
-            const isFormIncomplete = useMemo(() => {
-                return CRITERIA.some(c => {
-                    const sVal = formScores[c.id];
-                    return sVal === undefined || sVal === null || sVal === "" || isNaN(parseFloat(sVal));
-                });
-            }, [formScores]);
+      const stopRecording = () => {
+        if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+          mediaRecorderRef.current.stop();
+          setIsRecording(false);
+        }
+      };
 
-            const handleValueChange = (criterionId, val) => {
-                if (val === "" || val === undefined || val === null) {
-                    setFormScores(prev => ({ ...prev, [criterionId]: "" }));
-                    return;
-                }
-                const parsed = parseFloat(val);
-                if (isNaN(parsed)) {
-                    setFormScores(prev => ({ ...prev, [criterionId]: "" }));
-                    return;
-                }
-                const clamped = Math.max(0, Math.min(2, Math.round(parsed * 100) / 100));
-                setFormScores(prev => ({ ...prev, [criterionId]: clamped.toFixed(2) }));
-            };
+      const totalBaseScore = useMemo(() => {
+        return CRITERIA.reduce((acc, c) => acc + (parseFloat(formScores[c.id]) || 0), 0);
+      }, [formScores]);
 
-            const addSingleParticipant = async () => {
-                if (!newParticipantName.trim()) return;
-                try {
-                    await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'participants'), {
-                        name: newParticipantName.trim(),
-                        category: currentCategory,
-                        createdAt: Date.now()
-                    });
-                    setNewParticipantName('');
-                    showMessage('Participante registrado');
-                } catch (err) { showMessage('Error de red', 'error'); }
-            };
+      const totalDeductions = useMemo(() => {
+        return DEDUCTIONS_LIST.reduce((acc, d) => acc + ((parseInt(formDeductions[d.id]) || 0) * d.value), 0);
+      }, [formDeductions]);
 
-            const processBulkUpload = async () => {
-                if (!bulkList.trim()) return;
-                const names = bulkList.split('\n').map(n => n.trim()).filter(n => n.length > 0);
-                try {
-                    const batch = writeBatch(db);
-                    names.forEach(name => {
-                        const newRef = doc(collection(db, 'artifacts', appId, 'public', 'data', 'participants'));
-                        batch.set(newRef, { name, category: currentCategory, createdAt: Date.now() });
-                    });
-                    await batch.commit();
-                    setBulkList('');
-                    showMessage(`${names.length} sincronizados`);
-                } catch (err) { showMessage('Error masivo', 'error'); }
-            };
+      const finalTotal = useMemo(() => {
+        const total = totalBaseScore - totalDeductions;
+        return total < 0 ? 0 : total;
+      }, [totalBaseScore, totalDeductions]);
 
-            const deleteParticipant = async (id) => {
-                try {
-                    await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'participants', id));
-                    showMessage('Eliminado del sistema');
-                } catch (err) { showMessage('Error al borrar', 'error'); }
-            };
+      const isFormIncomplete = useMemo(() => {
+        return CRITERIA.some(c => formScores[c.id] === undefined || formScores[c.id] === "");
+      }, [formScores]);
 
-            const saveScore = async (isEdit = false) => {
-                if (!selectedGroup) return;
-                const jurorId = currentUserData?.id || 'invitado';
-                const scoreId = `${selectedGroup.id}_${jurorId}`;
-                
-                const cleanScores = {};
-                CRITERIA.forEach(c => {
-                    const rawVal = formScores[c.id];
-                    const parsed = parseFloat(rawVal);
-                    cleanScores[c.id] = (!isNaN(parsed)) ? parseFloat(parsed.toFixed(2)) : 0.00;
-                });
-
-                const payload = {
-                    participantId: selectedGroup.id,
-                    participantName: selectedGroup.name,
-                    category: selectedGroup.category,
-                    jurorId: jurorId,
-                    jurorName: currentUserData?.name || 'Jurado',
-                    values: cleanScores,
-                    deductions: formDeductions,
-                    audioNote: audioBase64 || null,
-                    baseScore: totals.base,
-                    totalDeductions: totals.deductions,
-                    total: parseFloat(totals.final.toFixed(2)),
-                    timestamp: Date.now(),
-                    hasEdited: isEdit 
-                };
-                try {
-                    if (user) {
-                        await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'scores', scoreId), { ...payload, timestamp: serverTimestamp() });
-                    }
-                    if (GOOGLE_SHEETS_URL) {
-                        fetch(GOOGLE_SHEETS_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(payload) }).catch(console.error);
-                    }
-                    if (isEdit) {
-                        showMessage('¡Puntaje actualizado!');
-                        setView('categories');
-                    } else {
-                        setView('success');
-                        setTimerRemaining(20); 
-                    }
-                } catch (error) { showMessage('Error al sincronizar', 'error'); }
-            };
-
-            const getAverageScore = (groupId) => {
-                const groupScores = scores.filter(s => s.participantId === groupId);
-                if (groupScores.length === 0) return 0;
-                const sum = groupScores.reduce((acc, curr) => acc + curr.total, 0);
-                return (sum / groupScores.length).toFixed(2);
-            };
-
-            const filteredScores = useMemo(() => {
-                if (!searchTerm) return scores;
-                const term = searchTerm.toLowerCase();
-                return scores.filter(s => s.jurorName.toLowerCase().includes(term) || s.participantName.toLowerCase().includes(term) || (s.category && s.category.toLowerCase().includes(term)));
-            }, [scores, searchTerm]);
-
-            if (view === 'login') return (
-                <div className="min-h-screen bg-slate-950 flex items-center justify-center p-6 text-white text-center">
-                    <div className="w-full max-w-md bg-slate-900 rounded-[3rem] p-12 shadow-2xl border border-slate-800 animate-in">
-                        {LOGO_URL ? (
-                            <img src={LOGO_URL} alt="North Champions Logo" className="h-24 mx-auto mb-6 object-contain drop-shadow-md" />
-                        ) : (
-                            <div className="bg-indigo-600 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-8 shadow-lg rotate-3"><Trophy size={32} /></div>
-                        )}
-                        <h1 className="text-2xl font-black uppercase tracking-tighter mb-1">North Champions</h1>
-                        <p className="text-indigo-400 font-bold text-[10px] uppercase tracking-widest mb-12">Acceso de Personal</p>
-                        <input type="password" placeholder="Contraseña" className="w-full bg-slate-800 border-2 border-slate-700 rounded-2xl p-5 mb-6 text-center text-2xl font-black outline-none focus:border-indigo-500 transition-all placeholder:text-slate-700" value={password} onChange={(e) => setPassword(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && handleLogin()} />
-                        <button onClick={handleLogin} className="w-full bg-indigo-600 hover:bg-indigo-500 py-5 rounded-2xl font-black text-lg active:scale-95 transition-all shadow-xl shadow-indigo-600/20 uppercase tracking-widest">INGRESAR</button>
-                    </div>
-                </div>
-            );
-
-            return (
-                <div className="min-h-screen bg-slate-50 text-slate-900 pb-10">
-                    <header className="bg-slate-950 text-white p-5 sticky top-0 z-50 shadow-xl flex justify-between items-center">
-                        <div className="flex items-center gap-3">
-                            {LOGO_URL ? (
-                                <img src={LOGO_URL} alt="Logo" className="h-10 w-auto object-contain" />
-                            ) : (
-                                <div className="bg-indigo-600 p-2 rounded-xl text-white"><Trophy size={20} /></div>
-                            )}
-                            <div className="flex flex-col">
-                                <span className="font-black text-lg tracking-tighter leading-none">NORTH CHAMPIONS</span>
-                                <span className="text-[10px] font-bold text-indigo-400 tracking-widest uppercase">Series 2026</span>
-                            </div>
-                        </div>
-                        <div className="flex items-center gap-4">
-                            <div className="hidden sm:flex flex-col items-end">
-                                <span className="text-[9px] font-black uppercase text-slate-500 leading-none mb-1">{currentUserData?.name}</span>
-                                <span className="text-[8px] font-black text-green-500 flex items-center gap-1 uppercase tracking-tighter"><Cloud size={10}/> Sistema Online</span>
-                            </div>
-                            <button onClick={() => setView('login')} className="bg-slate-800 p-2.5 rounded-xl text-slate-400 hover:text-red-400 transition-colors"><LogOut size={20} /></button>
-                        </div>
-                    </header>
-
-                    {message && (
-                        <div className={`fixed top-24 left-1/2 -translate-x-1/2 z-[100] px-8 py-3 rounded-full shadow-2xl font-black text-[10px] animate-in ${message.type === 'error' ? 'bg-red-600 text-white' : 'bg-indigo-600 text-white'}`}>{message.text.toUpperCase()}</div>
-                    )}
-
-                    <main className="max-w-2xl mx-auto p-5">
-                        {view === 'categories' && (
-                            <div className="space-y-6 animate-in">
-                                <h2 className="text-xl font-black text-slate-800 flex items-center gap-3 px-2 uppercase tracking-tight leading-none">Categorías</h2>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    {CATEGORIAS.map(cat => (
-                                        <button key={cat} onClick={() => { setSelectedCategory(cat); setView('groups'); }} className="bg-white p-6 rounded-[2rem] border-2 border-slate-100 shadow-sm flex justify-between items-center group active:scale-95 transition-all text-left">
-                                            <span className="text-lg font-black text-slate-700">{cat}</span>
-                                            <ChevronRight className="text-slate-200 group-hover:text-indigo-600" />
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-
-                        {view === 'groups' && (
-                            <div className="space-y-6 animate-in">
-                                <button onClick={() => setView('categories')} className="flex items-center gap-2 text-indigo-600 font-black text-[10px] uppercase mb-4 tracking-widest"><ChevronLeft size={16}/> Volver</button>
-                                <h2 className="text-2xl font-black text-slate-800">División: <span className="text-indigo-600">{selectedCategory}</span></h2>
-                                <div className="space-y-3">
-                                    {participants.filter(p => p.category === selectedCategory).map(p => {
-                                        const voted = scores.find(s => s.participantId === p.id && s.jurorId === currentUserData?.id);
-                                        return (
-                                            <button key={p.id} onClick={() => { 
-                                                setSelectedGroup(p); 
-                                                const initialScores = {};
-                                                CRITERIA.forEach(c => {
-                                                    const prevScore = voted?.values?.[c.id];
-                                                    initialScores[c.id] = (prevScore !== undefined && prevScore !== null) ? parseFloat(prevScore).toFixed(2) : "";
-                                                });
-                                                setFormScores(initialScores); 
-                                                setFormDeductions(voted?.deductions || {}); 
-                                                setAudioBase64(voted?.audioNote || null);
-                                                setView('form'); 
-                                            }} className={`w-full p-6 rounded-3xl flex justify-between items-center border-2 transition-all ${voted ? 'bg-indigo-50 border-indigo-200' : 'bg-white border-slate-100 shadow-sm'}`}>
-                                                <div className="text-left font-black text-xl text-slate-800">{p.name} {voted && <div className="text-[9px] font-black text-indigo-600 uppercase mt-1 flex items-center gap-1"><CheckCircle2 size={12}/> Listo</div>}</div>
-                                                <ChevronRight className="text-slate-200" />
-                                            </button>
-                                        );
-                                    })}
-                                    {participants.filter(p => p.category === selectedCategory).length === 0 && <div className="p-16 text-center bg-white rounded-[3rem] border-2 border-dashed border-slate-200 text-slate-400 font-bold uppercase text-[10px]">Sin competidores todavía</div>}
-                                </div>
-                            </div>
-                        )}
-
-                        {view === 'form' && selectedGroup && (
-                            <div className="space-y-8 animate-in">
-                                <button onClick={() => setView('groups')} className="flex items-center gap-2 text-indigo-600 font-black text-[10px] uppercase mb-6"><ChevronLeft size={16}/> Atrás</button>
-                                <div className="bg-white rounded-[3rem] shadow-2xl overflow-hidden border border-slate-200">
-                                    <div className="bg-slate-950 p-8 text-white relative">
-                                        <div className="text-[9px] font-black text-indigo-500 uppercase tracking-widest mb-1">{selectedGroup.category}</div>
-                                        <h2 className="text-3xl font-black tracking-tighter leading-none">{selectedGroup.name}</h2>
-                                    </div>
-                                    <div className="p-8 space-y-12">
-                                        {['Desempeño', 'Habilidades'].map(section => (
-                                            <div key={section} className="space-y-6">
-                                                <h3 className="text-[9px] font-black uppercase text-slate-400 tracking-[0.5em] border-b border-slate-50 pb-2">{section}</h3>
-                                                {CRITERIA.filter(c => section === c.section).map(c => {
-                                                    const rawValue = formScores[c.id];
-                                                    const parsedVal = parseFloat(rawValue);
-                                                    const isSet = rawValue !== undefined && rawValue !== null && rawValue !== "" && !isNaN(parsedVal);
-                                                    return (
-                                                        <div key={c.id} className="space-y-4 bg-slate-50/50 p-5 rounded-3xl border border-slate-100">
-                                                            <div className="flex justify-between items-center">
-                                                                <label className="text-sm font-black text-slate-700 block tracking-tight leading-tight">{c.label}</label>
-                                                                <span className="text-2xl font-black text-indigo-600 tabular-nums">
-                                                                    {isSet ? parsedVal.toFixed(2) : "0.00"}
-                                                                </span>
-                                                            </div>
-                                                            
-                                                            <div className="flex items-center gap-3">
-                                                                <button 
-                                                                    type="button"
-                                                                    onClick={() => {
-                                                                        const current = isSet ? parsedVal : 0.00;
-                                                                        handleValueChange(c.id, current - 0.01);
-                                                                    }}
-                                                                    className="bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 w-12 h-12 rounded-2xl flex items-center justify-center font-black text-2xl shadow-sm active:scale-95 transition-all select-none"
-                                                                >
-                                                                    -
-                                                                </button>
-                                                                
-                                                                <input 
-                                                                    type="text" 
-                                                                    inputMode="decimal" 
-                                                                    placeholder="0.00"
-                                                                    value={rawValue !== undefined ? rawValue : ""} 
-                                                                    onChange={(e) => {
-                                                                        let inputVal = e.target.value.replace(',', '.');
-                                                                        
-                                                                        if (inputVal === "") {
-                                                                            setFormScores(prev => ({ ...prev, [c.id]: "" }));
-                                                                            return;
-                                                                        }
-                                                                        
-                                                                        if (inputVal === ".") {
-                                                                            setFormScores(prev => ({ ...prev, [c.id]: "0." }));
-                                                                            return;
-                                                                        }
-
-                                                                        const clean = inputVal.replace(/[^0-9.]/g, '');
-                                                                        const parts = clean.split('.');
-                                                                        if (parts.length > 2) return;
-
-                                                                        if (parts[1] && parts[1].length > 2) return;
-
-                                                                        const parsedNum = parseFloat(clean);
-                                                                        if (!isNaN(parsedNum)) {
-                                                                            if (parsedNum > 2.0) {
-                                                                                setFormScores(prev => ({ ...prev, [c.id]: "2.00" }));
-                                                                            } else {
-                                                                                setFormScores(prev => ({ ...prev, [c.id]: clean }));
-                                                                            }
-                                                                        }
-                                                                    }}
-                                                                    onFocus={(e) => e.target.select()}
-                                                                    onBlur={() => {
-                                                                        const raw = formScores[c.id];
-                                                                        if (raw === undefined || raw === null || raw === "" || isNaN(parseFloat(raw))) {
-                                                                            handleValueChange(c.id, 0.00);
-                                                                        } else {
-                                                                            handleValueChange(c.id, parseFloat(raw));
-                                                                        }
-                                                                    }}
-                                                                    className="flex-1 bg-white border-2 border-slate-200 rounded-2xl h-12 text-center font-black text-2xl text-slate-800 focus:border-indigo-500 outline-none transition-all"
-                                                                />
-                                                                
-                                                                <button 
-                                                                    type="button"
-                                                                    onClick={() => {
-                                                                        const current = isSet ? parsedVal : 0.00;
-                                                                        handleValueChange(c.id, current + 0.01);
-                                                                    }}
-                                                                    className="bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 w-12 h-12 rounded-2xl flex items-center justify-center font-black text-2xl shadow-sm active:scale-95 transition-all select-none"
-                                                                >
-                                                                    +
-                                                                </button>
-                                                            </div>
-                                                        </div>
-                                                    );
-                                                })}
-                                            </div>
-                                        ))}
-
-                                        <div className="bg-red-50/40 p-6 rounded-[2.5rem] border border-red-100 space-y-5">
-                                            <h3 className="text-[9px] font-black uppercase text-red-500 tracking-[0.5em] flex items-center gap-2"><MinusCircle size={14}/> Penalizaciones</h3>
-                                            <div className="space-y-2">
-                                                {DEDUCTIONS_LIST.map(d => (
-                                                    <button key={d.id} onClick={() => setFormDeductions({...formDeductions, [d.id]: !formDeductions[d.id]})} className={`w-full p-4 rounded-2xl flex justify-between items-center transition-all border ${formDeductions[d.id] ? 'bg-red-600 text-white border-red-700' : 'bg-white text-slate-600 border-slate-200'}`}>
-                                                        <span className="text-[11px] font-bold text-left pr-4 leading-tight">{d.label}</span>
-                                                        <span className={`text-[10px] font-black ${formDeductions[d.id] ? 'text-white' : 'text-red-500'}`}>-{d.value.toFixed(2)}</span>
-                                                    </button>
-                                                ))}
-                                            </div>
-                                        </div>
-
-                                        {/* Audio recorder */}
-                                        <div className="bg-slate-900 text-white p-6 rounded-[2.5rem] space-y-4 shadow-xl">
-                                            <div className="flex justify-between items-center">
-                                                <span className="text-[10px] font-black uppercase tracking-[0.25em] text-indigo-400 flex items-center gap-2">
-                                                    <Mic size={14}/> Retroalimentación de Voz (Opcional)
-                                                </span>
-                                                {isRecording && (
-                                                    <span className="text-[10px] font-black text-red-400 animate-pulse flex items-center gap-1 uppercase">
-                                                        ● Grabando ({Math.floor(recordingTime / 60)}:{String(recordingTime % 60).padStart(2, '0')} / 4:00)
-                                                    </span>
-                                                )}
-                                            </div>
-
-                                            {!audioBase64 && !isRecording && (
-                                                <button
-                                                    type="button"
-                                                    onClick={startRecording}
-                                                    className="w-full bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white py-4 rounded-2xl font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 active:scale-95 transition-all"
-                                                >
-                                                    <Mic size={18} className="text-indigo-400" /> Grabar Comentario
-                                                </button>
-                                            )}
-
-                                            {isRecording && (
-                                                <button
-                                                    type="button"
-                                                    onClick={stopRecording}
-                                                    className="w-full bg-red-600 hover:bg-red-500 text-white py-4 rounded-2xl font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 active:scale-95 transition-all shadow-lg shadow-red-600/30"
-                                                >
-                                                    <Square size={18} /> Detener Grabación
-                                                </button>
-                                            )}
-
-                                            {audioBase64 && !isRecording && (
-                                                <div className="space-y-3 bg-slate-800 p-4 rounded-2xl border border-slate-700">
-                                                    <audio src={audioBase64} controls className="w-full h-10 rounded-xl" />
-                                                    <button
-                                                        type="button"
-                                                        onClick={discardAudio}
-                                                        className="text-[10px] text-red-400 font-black uppercase tracking-wider hover:text-red-300 flex items-center gap-1 mx-auto"
-                                                    >
-                                                        <Trash2 size={12} /> Borrar y volver a grabar
-                                                    </button>
-                                                </div>
-                                            )}
-                                        </div>
-
-                                        <div className="pt-8 border-t sticky bottom-0 bg-white pb-4 z-10">
-                                            <div className="space-y-1 mb-6 px-1">
-                                                <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest text-slate-400"><span>Puntaje Base</span><span>{totals.base.toFixed(2)} / 20.00</span></div>
-                                                <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest text-red-500/70"><span>Penalizaciones</span><span>-{totals.deductions.toFixed(2)}</span></div>
-                                                <div className="flex justify-between items-end mt-4 pt-3 border-t border-slate-100">
-                                                    <span className="font-black text-slate-400 uppercase text-[10px] tracking-widest">Total</span>
-                                                    <span className="text-6xl font-black text-indigo-600 tabular-nums leading-none tracking-tighter">{totals.final.toFixed(2)}</span>
-                                                </div>
-                                            </div>
-                                            <button disabled={isFormIncomplete} onClick={() => saveScore(scores.some(s => s.participantId === selectedGroup.id && s.jurorId === currentUserData?.id))} className={`w-full py-6 rounded-[2rem] font-black text-xl shadow-xl transition-all uppercase tracking-widest ${isFormIncomplete ? 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none' : 'bg-indigo-600 text-white active:scale-95'}`}>ENVIAR VOTO</button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-
-                        {view === 'success' && (
-                            <div className="py-20 text-center animate-in zoom-in">
-                                <div className="bg-green-100 text-green-600 w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-8 shadow-inner shadow-green-200/50"><CheckCircle2 size={56} /></div>
-                                <h2 className="text-4xl font-black text-slate-900 mb-2 tracking-tight uppercase">¡Enviado!</h2>
-                                <div className="bg-white p-10 rounded-[3.5rem] shadow-2xl border border-amber-100 w-full max-w-sm mx-auto mt-10">
-                                    <div className="text-6xl font-black text-amber-500 mb-2 tabular-nums tracking-tighter">{timerRemaining}s</div>
-                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-10">Ventana de corrección</p>
-                                    <button onClick={() => setView('form')} className="w-full bg-amber-500 text-white py-5 rounded-2xl font-black text-lg active:scale-95 uppercase shadow-xl shadow-amber-500/20">EDITAR</button>
-                                    <button onClick={() => { setView('categories'); setSelectedGroup(null); }} className="w-full mt-6 text-slate-400 font-black text-[10px] uppercase">Finalizar ahora</button>
-                                </div>
-                            </div>
-                        )}
-
-                        {view === 'admin' && (
-                            <div className="space-y-12 pb-20 animate-in">
-                                <div className="bg-white p-8 rounded-[3rem] border border-slate-200 shadow-xl space-y-8">
-                                    <div className="flex items-center gap-3 border-b border-slate-50 pb-4">
-                                        <div className="bg-indigo-50 p-3 rounded-2xl text-indigo-600"><UserPlus size={24}/></div>
-                                        <h3 className="text-xl font-black tracking-tight uppercase leading-none">Gestión de Competidores</h3>
-                                    </div>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                        <div className="space-y-4">
-                                            <h4 className="text-[10px] font-black uppercase text-indigo-500 tracking-widest flex items-center gap-2"><Plus size={14}/> Individual</h4>
-                                            <div className="space-y-3">
-                                                <input type="text" placeholder="Nombre" className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl p-4 font-bold outline-none focus:border-indigo-500 transition-all" value={newParticipantName} onChange={(e) => setNewParticipantName(e.target.value)} />
-                                                <select className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl p-4 font-bold outline-none appearance-none cursor-pointer" value={currentCategory} onChange={(e) => setCurrentCategory(e.target.value)}>
-                                                    {CATEGORIAS.map(c => <option key={c} value={c}>{c}</option>)}
-                                                </select>
-                                                <button onClick={addSingleParticipant} className="w-full bg-indigo-600 text-white py-4 rounded-2xl font-black uppercase tracking-widest active:scale-95 transition-all shadow-lg shadow-indigo-600/10 tracking-widest">Agregar</button>
-                                            </div>
-                                        </div>
-                                        <div className="space-y-4">
-                                            <h4 className="text-[10px] font-black uppercase text-indigo-500 tracking-widest flex items-center gap-2"><ClipboardList size={14}/> Carga Masiva</h4>
-                                            <div className="space-y-3">
-                                                <textarea placeholder="Un nombre por línea..." className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl p-4 font-bold outline-none h-[116px] resize-none text-xs" value={bulkList} onChange={(e) => setBulkList(e.target.value)} />
-                                                <button onClick={processBulkUpload} className="w-full bg-slate-900 text-white py-4 rounded-2xl font-black uppercase tracking-widest active:scale-95 flex items-center justify-center gap-2">
-                                                    <UploadCloud size={18}/> PROCESAR
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div className="mt-6 border-t border-slate-50 pt-6">
-                                        <h4 className="text-[10px] font-black uppercase text-slate-400 mb-4 px-2 tracking-widest">Base de Datos ({participants.length})</h4>
-                                        <div className="max-h-60 overflow-y-auto space-y-2 pr-2">
-                                            {participants.sort((a,b) => b.createdAt - a.createdAt).map(p => (
-                                                <div key={p.id} className="flex justify-between items-center bg-slate-50 p-4 rounded-2xl border border-slate-100">
-                                                    <div><div className="font-bold text-slate-800 leading-none mb-1">{p.name}</div><div className="text-[9px] font-black text-indigo-500 uppercase tracking-tighter">{p.category}</div></div>
-                                                    <button onClick={() => deleteParticipant(p.id)} className="text-slate-300 hover:text-red-600 transition-colors p-2"><Trash2 size={18} /></button>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div className="bg-slate-900 rounded-[3rem] p-8 text-white shadow-2xl overflow-hidden border border-white/5">
-                                    <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 px-4 gap-4">
-                                        <h3 className="text-xl font-black flex items-center gap-3 uppercase tracking-tight leading-none"><Users size={22} className="text-indigo-400" /> Registro de Actividad</h3>
-                                        <div className="relative group">
-                                            <Search size={16} className="absolute inset-y-0 left-4 my-auto text-slate-500" />
-                                            <input type="text" placeholder="Filtrar votos..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="bg-slate-800 border-2 border-slate-700 text-white text-xs rounded-2xl py-3 pl-11 pr-4 w-full md:w-80 outline-none focus:border-indigo-500 transition-all font-bold placeholder:text-slate-600" />
-                                        </div>
-                                    </div>
-                                    <div className="overflow-x-auto">
-                                        <table className="w-full text-left text-[11px]">
-                                            <thead>
-                                                <tr className="text-slate-500 border-b border-slate-800 uppercase tracking-widest font-black"><th className="p-4">Jurado</th><th className="p-4">Categoría</th><th className="p-4">Grupo</th><th className="p-4 text-center">Audio</th><th className="p-4 text-right">Base</th><th className="p-4 text-right">Deduc.</th><th className="p-4 text-right">Total</th></tr>
-                                            </thead>
-                                            <tbody className="divide-y divide-slate-800 font-bold">
-                                                {filteredScores.sort((a,b) => (b.timestamp || 0) - (a.timestamp || 0)).map(s => (
-                                                    <tr key={s.id} className="hover:bg-slate-800/50 transition-colors">
-                                                        <td className="p-4 text-slate-400 uppercase tracking-tighter">{s.jurorName}</td>
-                                                        <td className="p-4"><span className="bg-indigo-500/20 text-indigo-400 px-3 py-1 rounded-full text-[8px] uppercase font-black tracking-tighter">{s.category}</span></td>
-                                                        <td className="p-4 text-white text-xs leading-none">{s.participantName}</td>
-                                                        <td className="p-4 text-center">
-                                                            {s.audioNote ? (
-                                                                <audio src={s.audioNote} controls className="h-8 w-28 min-w-[110px] inline-block" />
-                                                            ) : (
-                                                                <span className="text-slate-600 font-mono text-[9px]">-</span>
-                                                            )}
-                                                        </td>
-                                                        <td className="p-4 text-right text-slate-400">{s.baseScore?.toFixed(2)}</td>
-                                                        <td className="p-4 text-right text-red-400">-{s.totalDeductions?.toFixed(2)}</td>
-                                                        <td className="p-4 text-right font-black text-indigo-400 text-sm tabular-nums">{s.total?.toFixed(2)}</td>
-                                                    </tr>
-                                                ))}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>
-
-                                <div className="space-y-8 pb-10">
-                                    <h2 className="text-4xl font-black tracking-tighter flex items-center gap-4 border-b border-slate-200 pb-8 px-2 uppercase leading-none">
-                                        <BarChart3 className="text-indigo-600" size={40} /> Podio General
-                                    </h2>
-                                    {CATEGORIAS.map(cat => {
-                                        const catParticipants = participants.filter(p => p.category === cat);
-                                        if (catParticipants.length === 0) return null;
-                                        const top3 = catParticipants.map(p => ({ ...p, avg: parseFloat(getAverageScore(p.id)) })).sort((a, b) => b.avg - a.avg).slice(0, 3);
-                                        return (
-                                            <div key={cat} className="space-y-5 animate-in">
-                                                <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-[0.5em] px-2 leading-none">{cat}</h3>
-                                                <div className="space-y-4">
-                                                    {top3.map((p, idx) => (
-                                                        <div key={p.id} className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100 flex items-center gap-6">
-                                                            <div className="w-14 h-14 rounded-3xl flex items-center justify-center font-black text-2xl shadow-lg bg-yellow-400 text-white">
-                                                                {idx + 1}
-                                                            </div>
-                                                            <div className="flex-1">
-                                                                <div className="font-black text-2xl text-slate-800 tracking-tight leading-none mb-2 uppercase">{p.name}</div>
-                                                                <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{scores.filter(s => s.participantId === p.id).length} Jueces calificados</div>
-                                                            </div>
-                                                            <div className="text-right bg-indigo-50 px-6 py-3 rounded-3xl border border-indigo-100">
-                                                                <div className="text-3xl font-black text-indigo-600 leading-none mb-1 tabular-nums">{p.avg.toFixed(2)}</div>
-                                                                <div className="text-[9px] font-black text-indigo-300 uppercase tracking-widest leading-none">Promedio</div>
-                                                            </div>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            </div>
-                        )}
-                    </main>
-                </div>
-            );
+      const handleSubmitVote = async () => {
+        if (isFormIncomplete) {
+          showMessage("Completa todos los criterios antes de enviar", "error");
+          return;
         }
 
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<App />);
-    </script>
+        const votePayload = {
+          juezId: currentUserData.id,
+          juezName: currentUserData.name,
+          categoria: selectedCategory,
+          participanteId: selectedGroup.id,
+          participanteName: selectedGroup.name,
+          scores: formScores,
+          deductions: formDeductions,
+          totalBase: totalBaseScore.toFixed(2),
+          totalDescuentos: totalDeductions.toFixed(2),
+          notaFinal: finalTotal.toFixed(2),
+          audio: audioBase64 || "",
+          timestamp: new Date().toISOString()
+        };
+
+        try {
+          await db.collection('scores').add(votePayload);
+
+          if (GOOGLE_SHEETS_URL) {
+            fetch(GOOGLE_SHEETS_URL, {
+              method: 'POST',
+              mode: 'no-cors',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(votePayload)
+            }).catch(e => console.log("Google Sheets sync:", e));
+          }
+
+          showMessage("¡Voto registrado y enviado!");
+          setFormScores({});
+          setFormDeductions({});
+          setAudioBase64(null);
+          setSelectedGroup(null);
+          setView('categories');
+        } catch (err) {
+          showMessage("Error al guardar la puntuación", "error");
+        }
+      };
+
+      return (
+        <div className="max-w-4xl mx-auto p-4 md:p-6">
+          {message && (
+            <div className={`fixed top-4 right-4 z-50 p-4 rounded-xl shadow-2xl border text-white font-medium flex items-center gap-3 ${
+              message.type === 'error' ? 'bg-rose-600 border-rose-500' : 'bg-emerald-600 border-emerald-500'
+            }`}>
+              <span>{message.text}</span>
+            </div>
+          )}
+
+          <header className="flex flex-col items-center justify-center mb-8 border-b border-slate-800 pb-6">
+            {LOGO_URL && (
+              <img src={LOGO_URL} alt="Logo" className="h-24 md:h-32 object-contain mb-3" onError={(e) => e.target.style.display = 'none'} />
+            )}
+            <h1 className="text-3xl md:text-4xl font-extrabold tracking-wider bg-gradient-to-r from-yellow-400 via-amber-500 to-yellow-600 bg-clip-text text-transparent text-center">
+              NORTH CHAMPIONS 2026
+            </h1>
+            {currentUserData && (
+              <div className="flex items-center gap-4 mt-3 bg-slate-800 px-4 py-1.5 rounded-full border border-slate-700 text-xs text-slate-300">
+                <span className="font-semibold text-yellow-400">{currentUserData.name}</span>
+                <button onClick={() => { setCurrentUserData(null); setView('login'); }} className="hover:text-rose-400 underline">
+                  Cerrar Sesión
+                </button>
+              </div>
+            )}
+          </header>
+
+          {view === 'login' && (
+            <div className="max-w-md mx-auto bg-slate-800 p-8 rounded-2xl border border-slate-700 shadow-2xl">
+              <h2 className="text-xl font-bold text-center text-slate-100 mb-6">Ingreso al Sistema</h2>
+              <form onSubmit={handleLogin} className="space-y-4">
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Introduce tu clave..."
+                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-slate-100 text-center font-mono tracking-widest"
+                />
+                <button type="submit" className="w-full bg-yellow-500 hover:bg-yellow-400 text-slate-950 font-bold py-3.5 rounded-xl">
+                  INGRESAR
+                </button>
+              </form>
+            </div>
+          )}
+
+          {view === 'categories' && (
+            <div className="space-y-6">
+              <h2 className="text-xl font-bold border-l-4 border-yellow-500 pl-3">Selecciona Categoría</h2>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                {CATEGORIAS.map(cat => (
+                  <button
+                    key={cat}
+                    onClick={() => { setSelectedCategory(cat); setSelectedGroup(null); }}
+                    className={`p-3.5 rounded-xl border text-left flex flex-col justify-between ${
+                      selectedCategory === cat ? 'bg-yellow-500/20 border-yellow-500 text-yellow-300' : 'bg-slate-800 border-slate-700 text-slate-300'
+                    }`}
+                  >
+                    <span>{cat}</span>
+                    <span className="text-[10px] text-slate-400 mt-2">{participants.filter(p => p.category === cat).length} competidores</span>
+                  </button>
+                ))}
+              </div>
+
+              {selectedCategory && (
+                <div className="bg-slate-800 p-6 rounded-2xl border border-slate-700">
+                  <h3 className="text-lg font-bold text-yellow-400 mb-4">Competidores en {selectedCategory}:</h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {participants.filter(p => p.category === selectedCategory).map(group => {
+                      const hasVoted = scores.some(s => s.participanteId === group.id && s.juezId === currentUserData.id);
+                      return (
+                        <button
+                          key={group.id}
+                          onClick={() => { setSelectedGroup(group); setView('scoring'); }}
+                          className={`p-4 rounded-xl border text-left flex items-center justify-between ${
+                            hasVoted ? 'bg-emerald-950/40 border-emerald-800 text-emerald-300' : 'bg-slate-900 border-slate-700 text-slate-200'
+                          }`}
+                        >
+                          <div>
+                            <div className="font-bold">{group.name}</div>
+                            <div className="text-xs text-slate-400">{hasVoted ? '✓ Ya evaluado por ti' : 'Pendiente'}</div>
+                          </div>
+                          <span className="text-xs bg-slate-800 px-3 py-1 rounded-full border border-slate-700">Evaluar →</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {view === 'scoring' && selectedGroup && (
+            <div className="space-y-6">
+              <div className="bg-slate-800 p-4 rounded-2xl border border-slate-700 flex items-center justify-between">
+                <div>
+                  <span className="text-xs uppercase text-yellow-500 font-semibold">{selectedCategory}</span>
+                  <h2 className="text-2xl font-black text-white">{selectedGroup.name}</h2>
+                </div>
+                <button onClick={() => setView('categories')} className="text-xs bg-slate-700 px-4 py-2 rounded-xl">← Cambiar Grupo</button>
+              </div>
+
+              <div className="bg-slate-800 p-6 rounded-2xl border border-slate-700 space-y-4">
+                <h3 className="text-lg font-bold text-yellow-400">Puntuación por Criterios (Máx 2.00)</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {CRITERIA.map(c => (
+                    <div key={c.id} className="bg-slate-900 p-3 rounded-xl border border-slate-800 flex items-center justify-between">
+                      <label className="text-xs text-slate-300">{c.label}</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        max="2"
+                        value={formScores[c.id] !== undefined ? formScores[c.id] : ""}
+                        onChange={(e) => setFormScores(prev => ({ ...prev, [c.id]: e.target.value }))}
+                        placeholder="0.00"
+                        className="w-20 bg-slate-800 border border-slate-700 rounded px-2 py-1 text-right text-yellow-400 font-bold"
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="bg-slate-800 p-6 rounded-2xl border border-slate-700 space-y-4">
+                <h3 className="text-lg font-bold text-sky-400">Devolución de Audio</h3>
+                <div className="flex flex-col items-center justify-center p-4 bg-slate-900 rounded-xl border border-dashed border-slate-700 gap-3">
+                  {!isRecording && !audioBase64 && (
+                    <button onClick={startRecording} className="bg-sky-600 text-white font-bold px-6 py-2.5 rounded-full">🎙️ Iniciar Grabación</button>
+                  )}
+                  {isRecording && (
+                    <button onClick={stopRecording} className="bg-rose-600 text-white font-bold px-6 py-2.5 rounded-full animate-pulse">⏹ DETENER ({recordingTime}s)</button>
+                  )}
+                  {audioBase64 && !isRecording && (
+                    <audio src={audioBase64} controls className="w-full max-w-md" />
+                  )}
+                </div>
+              </div>
+
+              <div className="bg-slate-800 p-6 rounded-2xl border border-yellow-500/50 flex items-center justify-between">
+                <div>
+                  <div className="text-xs text-slate-400 uppercase">Total Final</div>
+                  <div className="text-3xl font-mono text-yellow-400 font-bold">{finalTotal.toFixed(2)}</div>
+                </div>
+                <button
+                  onClick={handleSubmitVote}
+                  disabled={isFormIncomplete}
+                  className={`px-8 py-3.5 rounded-xl font-bold ${isFormIncomplete ? 'bg-slate-700 text-slate-500' : 'bg-yellow-500 text-slate-950 hover:bg-yellow-400'}`}
+                >
+                  ENVIAR VOTO
+                </button>
+              </div>
+            </div>
+          )}
+
+          {view === 'admin' && (
+            <div className="space-y-6">
+              <div className="bg-slate-800 p-6 rounded-2xl border border-slate-700 space-y-4">
+                <h3 className="text-lg font-bold text-yellow-400">GESTIÓN DE COMPETIDORES</h3>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="bg-slate-900 p-4 rounded-xl border border-slate-700 space-y-3">
+                    <h4 className="text-sm font-bold text-slate-300">+ INDIVIDUAL</h4>
+                    <select value={currentCategory} onChange={(e) => setCurrentCategory(e.target.value)} className="w-full bg-slate-800 border border-slate-700 rounded px-3 py-2 text-xs">
+                      {CATEGORIAS.map(c => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                    <input
+                      type="text"
+                      value={singleName}
+                      onChange={(e) => setSingleName(e.target.value)}
+                      placeholder="Nombre del competidor..."
+                      className="w-full bg-slate-800 border border-slate-700 rounded px-3 py-2 text-xs text-white"
+                    />
+                    <button onClick={handleAddSingle} className="w-full bg-yellow-500 text-slate-950 font-bold py-2 rounded text-xs">
+                      Guardar Competidor
+                    </button>
+                  </div>
+
+                  <div className="bg-slate-900 p-4 rounded-xl border border-slate-700 space-y-3">
+                    <h4 className="text-sm font-bold text-slate-300">📋 CARGA MASIVA</h4>
+                    <textarea
+                      rows="3"
+                      value={bulkList}
+                      onChange={(e) => setBulkList(e.target.value)}
+                      placeholder="Un nombre por línea..."
+                      className="w-full bg-slate-800 border border-slate-700 rounded p-2 text-xs text-white"
+                    />
+                    <button onClick={handleBulkAdd} className="w-full bg-amber-600 text-white font-bold py-2 rounded text-xs">
+                      Cargar Lista Completa
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-slate-800 p-6 rounded-2xl border border-slate-700 space-y-4">
+                <h3 className="text-lg font-bold text-white">Competidores Registrados ({participants.length})</h3>
+                <div className="divide-y divide-slate-700">
+                  {participants.map(p => (
+                    <div key={p.id} className="py-2 flex items-center justify-between text-xs">
+                      <div>
+                        <span className="font-bold text-slate-200">{p.name}</span>
+                        <span className="ml-2 text-yellow-500">({p.category})</span>
+                      </div>
+                      <button onClick={() => handleDeleteParticipant(p.id)} className="text-rose-400 hover:underline">Eliminar</button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </script>
 </body>
 </html>
