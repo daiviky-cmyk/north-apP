@@ -351,6 +351,7 @@
                     deductions: formDeductions,
                     audioNote: audioBase64 || null,
                     baseScore: totals.base,
+                    penalizacionesTotal: totals.deductions.toFixed(2), // Cifra exacta procesada
                     totalDeductions: totals.deductions,
                     total: parseFloat(totals.final.toFixed(2)),
                     timestamp: Date.now(),
