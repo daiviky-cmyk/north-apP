@@ -258,6 +258,13 @@
                 setTimeout(() => setMessage(null), 3000);
             };
 
+            const toggleDeduction = (deductionId) => {
+                setFormDeductions(prev => ({
+                    ...prev,
+                    [deductionId]: !prev[deductionId]
+                }));
+            };
+
             const totals = useMemo(() => {
                 const base = CRITERIA.reduce((acc, c) => {
                     const scoreVal = formScores[c.id];
@@ -265,7 +272,11 @@
                     const parsed = parseFloat(scoreVal);
                     return acc + (isNaN(parsed) ? 0 : parsed);
                 }, 0);
-                const deductions = DEDUCTIONS_LIST.reduce((acc, d) => acc + (formDeductions[d.id] ? d.value : 0), 0);
+                
+                const deductions = DEDUCTIONS_LIST.reduce((acc, d) => {
+                    return acc + (formDeductions[d.id] ? d.value : 0);
+                }, 0);
+
                 return { 
                     base: parseFloat(base.toFixed(2)), 
                     deductions: parseFloat(deductions.toFixed(2)), 
@@ -351,8 +362,8 @@
                     deductions: formDeductions,
                     audioNote: audioBase64 || null,
                     baseScore: totals.base,
-                    penalizacionesTotal: totals.deductions.toFixed(2), // Cifra exacta procesada
                     totalDeductions: totals.deductions,
+                    penalizacionMonto: totals.deductions.toFixed(2),
                     total: parseFloat(totals.final.toFixed(2)),
                     timestamp: Date.now(),
                     hasEdited: isEdit 
@@ -584,7 +595,12 @@
                                             <h3 className="text-[9px] font-black uppercase text-red-500 tracking-[0.5em] flex items-center gap-2"><MinusCircle size={14}/> Penalizaciones</h3>
                                             <div className="space-y-2">
                                                 {DEDUCTIONS_LIST.map(d => (
-                                                    <button key={d.id} onClick={() => setFormDeductions({...formDeductions, [d.id]: !formDeductions[d.id]})} className={`w-full p-4 rounded-2xl flex justify-between items-center transition-all border ${formDeductions[d.id] ? 'bg-red-600 text-white border-red-700' : 'bg-white text-slate-600 border-slate-200'}`}>
+                                                    <button 
+                                                        key={d.id} 
+                                                        type="button"
+                                                        onClick={() => toggleDeduction(d.id)} 
+                                                        className={`w-full p-4 rounded-2xl flex justify-between items-center transition-all border ${formDeductions[d.id] ? 'bg-red-600 text-white border-red-700 shadow-md' : 'bg-white text-slate-600 border-slate-200'}`}
+                                                    >
                                                         <span className="text-[11px] font-bold text-left pr-4 leading-tight">{d.label}</span>
                                                         <span className={`text-[10px] font-black ${formDeductions[d.id] ? 'text-white' : 'text-red-500'}`}>-{d.value.toFixed(2)}</span>
                                                     </button>
