@@ -74,7 +74,7 @@
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'north-champions-2026';
         const GOOGLE_SHEETS_URL = "https://script.google.com/macros/s/AKfycbwWErMfb1kwoJgsmhXtdO8BDe_Kkez8m0V4ZF-Aiu3WDq-SwNc-oxBUiv1FuBh3Z2D2/exec";
 
-        const LOGO_URL = "NORTH-26-JUJUY_1.jpg";
+        const LOGO_URL = "./logo.png";
 
         const CRITERIA = [
             { id: 'creatividad', label: '1. Creatividad', max: 2, section: 'Desempeño' },
@@ -329,7 +329,7 @@
                 } catch (err) { showMessage('Error al borrar', 'error'); }
             };
 
-           const saveScore = async (isEdit = false) => {
+            const saveScore = async (isEdit = false) => {
                 if (!selectedGroup) return;
                 const jurorId = currentUserData?.id || 'invitado';
                 const scoreId = `${selectedGroup.id}_${jurorId}`;
@@ -340,6 +340,7 @@
                     const parsed = parseFloat(rawVal);
                     cleanScores[c.id] = (!isNaN(parsed)) ? parseFloat(parsed.toFixed(2)) : 0.00;
                 });
+
                 const payload = {
                     participantId: selectedGroup.id,
                     participantName: selectedGroup.name,
@@ -350,11 +351,12 @@
                     deductions: formDeductions,
                     audioNote: audioBase64 || null,
                     baseScore: totals.base,
-                    totalDeductions: totals.deductions, // Envía el total de penalizaciones (ej: 0.50)
+                    totalDeductions: totals.deductions,
                     total: parseFloat(totals.final.toFixed(2)),
                     timestamp: Date.now(),
                     hasEdited: isEdit 
                 };
+
                 try {
                     if (user) {
                         await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'scores', scoreId), { ...payload, timestamp: serverTimestamp() });
@@ -366,23 +368,6 @@
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify(payload) 
                         }).catch(console.error);
-                    }
-                    if (isEdit) {
-                        showMessage('¡Puntaje actualizado!');
-                        setView('categories');
-                    } else {
-                        setView('success');
-                        setTimerRemaining(20); 
-                    }
-                } catch (error) { showMessage('Error al sincronizar', 'error'); }
-            };
-                };
-                try {
-                    if (user) {
-                        await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'scores', scoreId), { ...payload, timestamp: serverTimestamp() });
-                    }
-                    if (GOOGLE_SHEETS_URL) {
-                        fetch(GOOGLE_SHEETS_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(payload) }).catch(console.error);
                     }
                     if (isEdit) {
                         showMessage('¡Puntaje actualizado!');
