@@ -59,16 +59,14 @@
         const Mic = (props) => <Icon {...props} path={<><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></>} />;
         const Square = (props) => <Icon {...props} path={<rect width="18" height="18" x="3" y="3" rx="2"/>} />;
 
-        const firebaseConfig = typeof __firebase_config !== 'undefined' 
-          ? (typeof __firebase_config === 'string' ? JSON.parse(__firebase_config) : __firebase_config)
-          : {
-              apiKey: "demo-api-key",
-              authDomain: "demo.firebaseapp.com",
-              projectId: "north-champions-2026",
-              storageBucket: "demo.appspot.com",
-              messagingSenderId: "000000000000",
-              appId: "1:000000000000:web:0000000000000000"
-            };
+       const firebaseConfig = {
+          apiKey: "AIzaSyCLW7tZxGuecMGa7FgWuvGMcxi4x_5wD7w",
+          authDomain: "north-champions-2026.firebaseapp.com",
+          projectId: "north-champions-2026",
+          storageBucket: "north-champions-2026.firebasestorage.app",
+          messagingSenderId: "14904881173",
+          appId: "1:14904881173:web:97937bc54d5d309155f81c"
+       };
 
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
