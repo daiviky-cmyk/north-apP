@@ -11,12 +11,14 @@
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <!-- Babel for JSX -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    
+    <!-- jsPDF para exportación de reportes -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
         body { font-family: 'Inter', sans-serif; }
-        .animate-in { animation: fadeIn 0.5s ease-out; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-in { animation: fadeIn 0.3s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: #0f172a; }
         ::-webkit-scrollbar-thumb { background: #4f46e5; border-radius: 10px; }
@@ -45,6 +47,8 @@
         const Cloud = (props) => <Icon {...props} path={<path d="M17.5 19a5.5 5.5 0 0 0 2.5-10.5 8.5 8.5 0 1 0-15.5 1.5A5.5 5.5 0 0 0 4.5 19Z"/>} />;
         const ChevronRight = (props) => <Icon {...props} path={<polyline points="9 18 15 12 9 6"/>} />;
         const ChevronLeft = (props) => <Icon {...props} path={<polyline points="15 18 9 12 15 6"/>} />;
+        const ChevronDown = (props) => <Icon {...props} path={<polyline points="6 9 12 15 18 9"/>} />;
+        const ChevronUp = (props) => <Icon {...props} path={<polyline points="18 15 12 9 6 15"/>} />;
         const CheckCircle2 = (props) => <Icon {...props} path={<><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/><path d="m9 12 2 2 4-4"/></>} />;
         const MinusCircle = (props) => <Icon {...props} path={<><circle cx="12" cy="12" r="10"/><line x1="8" x2="16" y1="12" y2="12"/></>} />;
         const UserPlus = (props) => <Icon {...props} path={<><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" x2="19" y1="8" y2="14"/><line x1="16" x2="22" y1="11" y2="11"/></>} />;
@@ -55,8 +59,7 @@
         const Users = (props) => <Icon {...props} path={<><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></>} />;
         const Search = (props) => <Icon {...props} path={<><circle cx="11" cy="11" r="8"/><line x1="21" x2="16.65" y1="21" y2="16.65"/></>} />;
         const BarChart3 = (props) => <Icon {...props} path={<><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></>} />;
-        const Mic = (props) => <Icon {...props} path={<><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></>} />;
-        const Square = (props) => <Icon {...props} path={<rect width="18" height="18" x="3" y="3" rx="2"/>} />;
+        const FileText = (props) => <Icon {...props} path={<><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></>} />;
 
         const firebaseConfig = {
           apiKey: "AIzaSyCLW7tZxGuecMGa7FgWuvGMcxi4x_5wD7w",
@@ -72,8 +75,6 @@
         const db = getFirestore(app);
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'north-champions-2026';
         const GOOGLE_SHEETS_URL = "https://script.google.com/macros/s/AKfycbxbXEeV2VXXW8P6RD9riqkKtaMr2FedlRnWxn21rbd_ZuL88Wbec-elQyOcmOVAOEws/exec";
-        const AUDIO_DRIVE_URL = "PEGA_AQUI_LA_URL_DE_TU_APPS_SCRIPT_DE_AUDIO";
-        const AUDIO_DRIVE_URL = "PEGA_AQUI_LA_URL_DE_TU_APPS_SCRIPT_DE_AUDIO";
 
         const LOGO_URL = "./logo.png";
 
@@ -131,73 +132,13 @@
             const [newParticipantName, setNewParticipantName] = useState('');
             const [bulkList, setBulkList] = useState('');
             const [currentCategory, setCurrentCategory] = useState(CATEGORIAS[0]);
+            const [isSubmitting, setIsSubmitting] = useState(false);
+            
+            // Estado para acordeones desplegables en podio
+            const [expandedCategories, setExpandedCategories] = useState({});
 
-            // Audio Recorder
-            const [isRecording, setIsRecording] = useState(false);
-            const [recordingTime, setRecordingTime] = useState(0);
-            const [audioBase64, setAudioBase64] = useState(null);
-            const [mediaRecorder, setMediaRecorder] = useState(null);
-
-            const MAX_RECORDING_TIME = 240;
-
-            useEffect(() => {
-                let timer;
-                if (isRecording) {
-                    timer = setInterval(() => {
-                        setRecordingTime(prev => {
-                            if (prev >= MAX_RECORDING_TIME - 1) {
-                                stopRecording();
-                                return MAX_RECORDING_TIME;
-                            }
-                            return prev + 1;
-                        });
-                    }, 1000);
-                } else {
-                    setRecordingTime(0);
-                }
-                return () => clearInterval(timer);
-            }, [isRecording]);
-
-            const startRecording = async () => {
-                try {
-                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                    const options = { mimeType: 'audio/webm;codecs=opus' };
-                    const recorder = new MediaRecorder(stream, MediaRecorder.isTypeSupported(options.mimeType) ? options : {});
-                    const chunks = [];
-                    
-                    recorder.ondataavailable = (e) => {
-                        if (e.data.size > 0) chunks.push(e.data);
-                    };
-
-                    recorder.onstop = () => {
-                        const blob = new Blob(chunks, { type: recorder.mimeType || 'audio/webm' });
-                        const reader = new FileReader();
-                        reader.readAsDataURL(blob);
-                        reader.onloadend = () => {
-                            setAudioBase64(reader.result);
-                        };
-                        stream.getTracks().forEach(track => track.stop());
-                    };
-
-                    recorder.start(1000);
-                    setMediaRecorder(recorder);
-                    setIsRecording(true);
-                    setRecordingTime(0);
-                } catch (err) {
-                    showMessage('Error al acceder al micrófono', 'error');
-                }
-            };
-
-            const stopRecording = () => {
-                if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-                    mediaRecorder.stop();
-                    setIsRecording(false);
-                }
-            };
-
-            const discardAudio = () => {
-                setAudioBase64(null);
-                setRecordingTime(0);
+            const toggleCategoryExpand = (cat) => {
+                setExpandedCategories(prev => ({ ...prev, [cat]: !prev[cat] }));
             };
 
             useEffect(() => {
@@ -342,34 +283,8 @@
             };
 
             const saveScore = async (isEdit = false) => {
-                if (!selectedGroup) return;
-                
-                let finalAudioUrl = "Sin audio";
-
-                // Subida directa del audio a Google Drive vía Apps Script
-                if (audioBase64) {
-                    try {
-                        const driveRes = await fetch(AUDIO_DRIVE_URL, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                            body: JSON.stringify({
-                                audio: audioBase64,
-                                participantName: selectedGroup.name,
-                                category: selectedGroup.category,
-                                jurorName: currentUserData?.name || 'Jurado'
-                            })
-                        });
-
-                        const driveData = await driveRes.json();
-                        if (driveData.success) {
-                            finalAudioUrl = driveData.directLink || driveData.url;
-                        } else {
-                            console.error("Respuesta de Drive sin éxito:", driveData.error);
-                        }
-                    } catch (errAudio) {
-                        console.error("Error al subir audio a Google Drive:", errAudio);
-                    }
-                }
+                if (!selectedGroup || isSubmitting) return;
+                setIsSubmitting(true);
 
                 const jurorId = currentUserData?.id || 'invitado';
                 const scoreId = `${selectedGroup.id}_${jurorId}`;
@@ -389,7 +304,6 @@
                     jurorName: currentUserData?.name || 'Jurado',
                     values: cleanScores,
                     deductions: formDeductions,
-                    audioNote: finalAudioUrl,
                     baseScore: totals.base,
                     totalDeductions: totals.deductions,
                     total: parseFloat(totals.final.toFixed(2)),
@@ -402,13 +316,14 @@
                         await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'scores', scoreId), { ...payload, timestamp: serverTimestamp() });
                     }
                     if (GOOGLE_SHEETS_URL) {
-                        await fetch(GOOGLE_SHEETS_URL, { 
+                        fetch(GOOGLE_SHEETS_URL, { 
                             method: 'POST', 
                             mode: 'no-cors', 
                             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                             body: JSON.stringify(payload) 
                         }).catch(console.error);
                     }
+                    setIsSubmitting(false);
                     if (isEdit) {
                         showMessage('¡Puntaje actualizado!');
                         setView('categories');
@@ -417,6 +332,7 @@
                         setTimerRemaining(20); 
                     }
                 } catch (error) { 
+                    setIsSubmitting(false);
                     showMessage('Error al guardar datos', 'error'); 
                 }
             };
@@ -426,6 +342,115 @@
                 if (groupScores.length === 0) return 0;
                 const sum = groupScores.reduce((acc, curr) => acc + curr.total, 0);
                 return (sum / groupScores.length).toFixed(2);
+            };
+
+            // Función para generar y descargar un PDF Individual del Participante
+            const generateParticipantPDF = (participant, pos) => {
+                try {
+                    const { jsPDF } = window.jspdf;
+                    const doc = new jsPDF();
+
+                    const partScores = scores.filter(s => s.participantId === participant.id);
+                    const avg = getAverageScore(participant.id);
+
+                    // Encabezado
+                    doc.setFillColor(15, 23, 42); // slate-950
+                    doc.rect(0, 0, 210, 35, 'F');
+                    
+                    doc.setTextColor(255, 255, 255);
+                    doc.setFontSize(20);
+                    doc.setFont("helvetica", "bold");
+                    doc.text("NORTH CHAMPIONS 2026", 14, 18);
+                    
+                    doc.setFontSize(10);
+                    doc.setFont("helvetica", "normal");
+                    doc.text("REPORTE OFICIAL DE RESULTADOS INDIVIDUALES", 14, 26);
+
+                    // Información del participante
+                    doc.setTextColor(15, 23, 42);
+                    doc.setFontSize(16);
+                    doc.setFont("helvetica", "bold");
+                    doc.text(`${participant.name.toUpperCase()}`, 14, 48);
+
+                    doc.setFontSize(10);
+                    doc.setFont("helvetica", "normal");
+                    doc.text(`Categoría: ${participant.category}`, 14, 55);
+                    if (pos) {
+                        doc.text(`Posición en la categoría: #${pos}`, 14, 61);
+                    }
+
+                    // Cuadro con Puntaje Promedio
+                    doc.setFillColor(238, 242, 255); // indigo-50
+                    doc.setDrawColor(199, 210, 254);
+                    doc.roundedRect(130, 42, 65, 24, 3, 3, 'FD');
+
+                    doc.setTextColor(79, 70, 229); // indigo-600
+                    doc.setFontSize(22);
+                    doc.setFont("helvetica", "bold");
+                    doc.text(`${avg}`, 162.5, 56, { align: 'center' });
+                    doc.setFontSize(8);
+                    doc.text("PUNTAJE PROMEDIO FINAL", 162.5, 62, { align: 'center' });
+
+                    let y = 78;
+
+                    if (partScores.length === 0) {
+                        doc.setTextColor(100, 116, 139);
+                        doc.setFontSize(12);
+                        doc.text("Aún no se registraron evaluaciones para este competidor.", 14, y);
+                    } else {
+                        doc.setTextColor(15, 23, 42);
+                        doc.setFontSize(12);
+                        doc.setFont("helvetica", "bold");
+                        doc.text("Desglose por Jurados Evaluadores", 14, y);
+                        y += 8;
+
+                        partScores.forEach((s, index) => {
+                            if (y > 250) {
+                                doc.addPage();
+                                y = 20;
+                            }
+
+                            doc.setFillColor(248, 250, 252);
+                            doc.setDrawColor(226, 232, 240);
+                            doc.roundedRect(14, y, 182, 38, 2, 2, 'FD');
+
+                            doc.setFontSize(11);
+                            doc.setFont("helvetica", "bold");
+                            doc.setTextColor(15, 23, 42);
+                            doc.text(`${s.jurorName}`, 18, y + 8);
+
+                            doc.setFontSize(10);
+                            doc.setTextColor(79, 70, 229);
+                            doc.text(`Total: ${s.total?.toFixed(2) || '0.00'} pts`, 180, y + 8, { align: 'right' });
+
+                            doc.setFontSize(9);
+                            doc.setFont("helvetica", "normal");
+                            doc.setTextColor(71, 85, 105);
+                            doc.text(`Subtotal Base: ${s.baseScore?.toFixed(2) || '0.00'}  |  Penalizaciones: -${s.totalDeductions?.toFixed(2) || '0.00'}`, 18, y + 16);
+
+                            // Criterios principales
+                            const scoresSummary = CRITERIA.slice(0, 5).map(c => `${c.label.split('.')[1]?.trim() || c.label}: ${s.values?.[c.id] || 0}`).join('  •  ');
+                            doc.setFontSize(7.5);
+                            doc.text(scoresSummary, 18, y + 24);
+
+                            const scoresSummary2 = CRITERIA.slice(5).map(c => `${c.label.split('.')[1]?.trim() || c.label}: ${s.values?.[c.id] || 0}`).join('  •  ');
+                            doc.text(scoresSummary2, 18, y + 30);
+
+                            y += 44;
+                        });
+                    }
+
+                    // Pie de página
+                    doc.setFontSize(8);
+                    doc.setTextColor(148, 163, 184);
+                    doc.text(`Documento generado oficialmente por el sistema North Champions el ${new Date().toLocaleDateString('es-AR')}`, 14, 285);
+
+                    doc.save(`Resultado_${participant.name.replace(/\s+/g, '_')}_NorthChampions.pdf`);
+                    showMessage('PDF exportado exitosamente');
+                } catch (e) {
+                    console.error("Error al generar PDF:", e);
+                    showMessage('Error al generar el PDF', 'error');
+                }
             };
 
             const filteredScores = useMemo(() => {
@@ -509,7 +534,6 @@
                                                 });
                                                 setFormScores(initialScores); 
                                                 setFormDeductions(voted?.deductions || {}); 
-                                                setAudioBase64(voted?.audioNote || null);
                                                 setView('form'); 
                                             }} className={`w-full p-6 rounded-3xl flex justify-between items-center border-2 transition-all ${voted ? 'bg-indigo-50 border-indigo-200' : 'bg-white border-slate-100 shadow-sm'}`}>
                                                 <div className="text-left font-black text-xl text-slate-800">{p.name} {voted && <div className="text-[9px] font-black text-indigo-600 uppercase mt-1 flex items-center gap-1"><CheckCircle2 size={12}/> Listo</div>}</div>
@@ -634,53 +658,6 @@
                                             </div>
                                         </div>
 
-                                        {/* Audio recorder */}
-                                        <div className="bg-slate-900 text-white p-6 rounded-[2.5rem] space-y-4 shadow-xl">
-                                            <div className="flex justify-between items-center">
-                                                <span className="text-[10px] font-black uppercase tracking-[0.25em] text-indigo-400 flex items-center gap-2">
-                                                    <Mic size={14}/> Retroalimentación de Voz (Opcional)
-                                                </span>
-                                                {isRecording && (
-                                                    <span className="text-[10px] font-black text-red-400 animate-pulse flex items-center gap-1 uppercase">
-                                                        ● Grabando ({Math.floor(recordingTime / 60)}:{String(recordingTime % 60).padStart(2, '0')} / 4:00)
-                                                    </span>
-                                                )}
-                                            </div>
-
-                                            {!audioBase64 && !isRecording && (
-                                                <button
-                                                    type="button"
-                                                    onClick={startRecording}
-                                                    className="w-full bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white py-4 rounded-2xl font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 active:scale-95 transition-all"
-                                                >
-                                                    <Mic size={18} className="text-indigo-400" /> Grabar Comentario
-                                                </button>
-                                            )}
-
-                                            {isRecording && (
-                                                <button
-                                                    type="button"
-                                                    onClick={stopRecording}
-                                                    className="w-full bg-red-600 hover:bg-red-500 text-white py-4 rounded-2xl font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 active:scale-95 transition-all shadow-lg shadow-red-600/30"
-                                                >
-                                                    <Square size={18} /> Detener Grabación
-                                                </button>
-                                            )}
-
-                                            {audioBase64 && !isRecording && (
-                                                <div className="space-y-3 bg-slate-800 p-4 rounded-2xl border border-slate-700">
-                                                    <audio src={audioBase64} controls className="w-full h-10 rounded-xl" />
-                                                    <button
-                                                        type="button"
-                                                        onClick={discardAudio}
-                                                        className="text-[10px] text-red-400 font-black uppercase tracking-wider hover:text-red-300 flex items-center gap-1 mx-auto"
-                                                    >
-                                                        <Trash2 size={12} /> Borrar y volver a grabar
-                                                    </button>
-                                                </div>
-                                            )}
-                                        </div>
-
                                         <div className="pt-8 border-t sticky bottom-0 bg-white pb-4 z-10">
                                             <div className="space-y-1 mb-6 px-1">
                                                 <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest text-slate-400"><span>Puntaje Base</span><span>{totals.base.toFixed(2)} / 20.00</span></div>
@@ -690,7 +667,13 @@
                                                     <span className="text-6xl font-black text-indigo-600 tabular-nums leading-none tracking-tighter">{totals.final.toFixed(2)}</span>
                                                 </div>
                                             </div>
-                                            <button disabled={isFormIncomplete} onClick={() => saveScore(scores.some(s => s.participantId === selectedGroup.id && s.jurorId === currentUserData?.id))} className={`w-full py-6 rounded-[2rem] font-black text-xl shadow-xl transition-all uppercase tracking-widest ${isFormIncomplete ? 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none' : 'bg-indigo-600 text-white active:scale-95'}`}>ENVIAR VOTO</button>
+                                            <button 
+                                                disabled={isFormIncomplete || isSubmitting} 
+                                                onClick={() => saveScore(scores.some(s => s.participantId === selectedGroup.id && s.jurorId === currentUserData?.id))} 
+                                                className={`w-full py-6 rounded-[2rem] font-black text-xl shadow-xl transition-all uppercase tracking-widest ${isFormIncomplete || isSubmitting ? 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none' : 'bg-indigo-600 text-white active:scale-95'}`}
+                                            >
+                                                {isSubmitting ? 'GUARDANDO...' : 'ENVIAR VOTO'}
+                                            </button>
                                         </div>
                                     </div>
                                 </div>
@@ -743,8 +726,16 @@
                                         <div className="max-h-60 overflow-y-auto space-y-2 pr-2">
                                             {participants.sort((a,b) => b.createdAt - a.createdAt).map(p => (
                                                 <div key={p.id} className="flex justify-between items-center bg-slate-50 p-4 rounded-2xl border border-slate-100">
-                                                    <div><div className="font-bold text-slate-800 leading-none mb-1">{p.name}</div><div className="text-[9px] font-black text-indigo-500 uppercase tracking-tighter">{p.category}</div></div>
-                                                    <button onClick={() => deleteParticipant(p.id)} className="text-slate-300 hover:text-red-600 transition-colors p-2"><Trash2 size={18} /></button>
+                                                    <div>
+                                                        <div className="font-bold text-slate-800 leading-none mb-1">{p.name}</div>
+                                                        <div className="text-[9px] font-black text-indigo-500 uppercase tracking-tighter">{p.category}</div>
+                                                    </div>
+                                                    <div className="flex items-center gap-2">
+                                                        <button onClick={() => generateParticipantPDF(p)} title="Exportar PDF" className="bg-indigo-50 text-indigo-600 hover:bg-indigo-100 p-2.5 rounded-xl font-black text-[10px] flex items-center gap-1 transition-all">
+                                                            <FileText size={16} /> PDF
+                                                        </button>
+                                                        <button onClick={() => deleteParticipant(p.id)} className="text-slate-300 hover:text-red-600 transition-colors p-2"><Trash2 size={18} /></button>
+                                                    </div>
                                                 </div>
                                             ))}
                                         </div>
@@ -762,7 +753,7 @@
                                     <div className="overflow-x-auto">
                                         <table className="w-full text-left text-[11px]">
                                             <thead>
-                                                <tr className="text-slate-500 border-b border-slate-800 uppercase tracking-widest font-black"><th className="p-4">Jurado</th><th className="p-4">Categoría</th><th className="p-4">Grupo</th><th className="p-4 text-center">Audio</th><th className="p-4 text-right">Base</th><th className="p-4 text-right">Deduc.</th><th className="p-4 text-right">Total</th></tr>
+                                                <tr className="text-slate-500 border-b border-slate-800 uppercase tracking-widest font-black"><th className="p-4">Jurado</th><th className="p-4">Categoría</th><th className="p-4">Grupo</th><th className="p-4 text-right">Base</th><th className="p-4 text-right">Deduc.</th><th className="p-4 text-right">Total</th></tr>
                                             </thead>
                                             <tbody className="divide-y divide-slate-800 font-bold">
                                                 {filteredScores.sort((a,b) => (b.timestamp || 0) - (a.timestamp || 0)).map(s => (
@@ -770,13 +761,6 @@
                                                         <td className="p-4 text-slate-400 uppercase tracking-tighter">{s.jurorName}</td>
                                                         <td className="p-4"><span className="bg-indigo-500/20 text-indigo-400 px-3 py-1 rounded-full text-[8px] uppercase font-black tracking-tighter">{s.category}</span></td>
                                                         <td className="p-4 text-white text-xs leading-none">{s.participantName}</td>
-                                                        <td className="p-4 text-center">
-                                                            {s.audioNote && s.audioNote !== "Sin audio" ? (
-                                                                <audio src={s.audioNote} controls className="h-8 w-28 min-w-[110px] inline-block" />
-                                                            ) : (
-                                                                <span className="text-slate-600 font-mono text-[9px]">-</span>
-                                                            )}
-                                                        </td>
                                                         <td className="p-4 text-right text-slate-400">{s.baseScore?.toFixed(2)}</td>
                                                         <td className="p-4 text-right text-red-400">-{s.totalDeductions?.toFixed(2)}</td>
                                                         <td className="p-4 text-right font-black text-indigo-400 text-sm tabular-nums">{s.total?.toFixed(2)}</td>
@@ -787,6 +771,7 @@
                                     </div>
                                 </div>
 
+                                {/* TABLA DE PODIO CON DESPLEGABLE DE RANKING COMPLETO */}
                                 <div className="space-y-8 pb-10">
                                     <h2 className="text-4xl font-black tracking-tighter flex items-center gap-4 border-b border-slate-200 pb-8 px-2 uppercase leading-none">
                                         <BarChart3 className="text-indigo-600" size={40} /> Podio General
@@ -794,26 +779,85 @@
                                     {CATEGORIAS.map(cat => {
                                         const catParticipants = participants.filter(p => p.category === cat);
                                         if (catParticipants.length === 0) return null;
-                                        const top3 = catParticipants.map(p => ({ ...p, avg: parseFloat(getAverageScore(p.id)) })).sort((a, b) => b.avg - a.avg).slice(0, 3);
+                                        
+                                        // Todos ordenados de mayor a menor puntaje promedio
+                                        const sortedAll = catParticipants
+                                            .map(p => ({ ...p, avg: parseFloat(getAverageScore(p.id)) }))
+                                            .sort((a, b) => b.avg - a.avg);
+
+                                        const top3 = sortedAll.slice(0, 3);
+                                        const rest = sortedAll.slice(3);
+                                        const isExpanded = expandedCategories[cat];
+
                                         return (
                                             <div key={cat} className="space-y-5 animate-in">
                                                 <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-[0.5em] px-2 leading-none">{cat}</h3>
                                                 <div className="space-y-4">
                                                     {top3.map((p, idx) => (
                                                         <div key={p.id} className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100 flex items-center gap-6">
-                                                            <div className="w-14 h-14 rounded-3xl flex items-center justify-center font-black text-2xl shadow-lg bg-yellow-400 text-white">
+                                                            <div className={`w-14 h-14 rounded-3xl flex items-center justify-center font-black text-2xl shadow-lg text-white ${idx === 0 ? 'bg-amber-400' : idx === 1 ? 'bg-slate-400' : 'bg-amber-700'}`}>
                                                                 {idx + 1}
                                                             </div>
                                                             <div className="flex-1">
                                                                 <div className="font-black text-2xl text-slate-800 tracking-tight leading-none mb-2 uppercase">{p.name}</div>
                                                                 <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{scores.filter(s => s.participantId === p.id).length} Jueces calificados</div>
                                                             </div>
-                                                            <div className="text-right bg-indigo-50 px-6 py-3 rounded-3xl border border-indigo-100">
-                                                                <div className="text-3xl font-black text-indigo-600 leading-none mb-1 tabular-nums">{p.avg.toFixed(2)}</div>
-                                                                <div className="text-[9px] font-black text-indigo-300 uppercase tracking-widest leading-none">Promedio</div>
+                                                            <div className="flex items-center gap-4">
+                                                                <button onClick={() => generateParticipantPDF(p, idx + 1)} title="Exportar PDF" className="bg-indigo-50 hover:bg-indigo-100 text-indigo-600 p-3 rounded-2xl font-black text-xs flex items-center gap-1.5 transition-all">
+                                                                    <FileText size={18} /> <span className="hidden sm:inline">PDF</span>
+                                                                </button>
+                                                                <div className="text-right bg-indigo-50 px-6 py-3 rounded-3xl border border-indigo-100">
+                                                                    <div className="text-3xl font-black text-indigo-600 leading-none mb-1 tabular-nums">{p.avg.toFixed(2)}</div>
+                                                                    <div className="text-[9px] font-black text-indigo-300 uppercase tracking-widest leading-none">Promedio</div>
+                                                                </div>
                                                             </div>
                                                         </div>
                                                     ))}
+
+                                                    {/* BOTÓN DESPLEGABLE SI HAY MÁS DE 3 COMPETIDORES */}
+                                                    {rest.length > 0 && (
+                                                        <div className="pt-2">
+                                                            <button 
+                                                                onClick={() => toggleCategoryExpand(cat)}
+                                                                className="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 py-4 px-6 rounded-2xl font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 transition-all"
+                                                            >
+                                                                {isExpanded ? (
+                                                                    <>Ocultar resto de competidores ({rest.length}) <ChevronUp size={16} /></>
+                                                                ) : (
+                                                                    <>Ver ranking completo ({rest.length} más) <ChevronDown size={16} /></>
+                                                                )}
+                                                            </button>
+
+                                                            {/* LISTA DESPLEGADA */}
+                                                            {isExpanded && (
+                                                                <div className="mt-4 space-y-3 pl-4 border-l-4 border-indigo-200 animate-in">
+                                                                    {rest.map((p, restIdx) => {
+                                                                        const realPosition = restIdx + 4;
+                                                                        return (
+                                                                            <div key={p.id} className="bg-white p-5 rounded-2xl border border-slate-100 flex items-center gap-4">
+                                                                                <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-600 font-black text-base flex items-center justify-center">
+                                                                                    #{realPosition}
+                                                                                </div>
+                                                                                <div className="flex-1">
+                                                                                    <div className="font-bold text-slate-800 uppercase text-base">{p.name}</div>
+                                                                                    <div className="text-[8px] font-black text-slate-400 uppercase tracking-widest">{scores.filter(s => s.participantId === p.id).length} Jueces</div>
+                                                                                </div>
+                                                                                <div className="flex items-center gap-3">
+                                                                                    <button onClick={() => generateParticipantPDF(p, realPosition)} title="Exportar PDF" className="bg-slate-100 hover:bg-indigo-50 hover:text-indigo-600 text-slate-600 p-2.5 rounded-xl transition-all">
+                                                                                        <FileText size={16} />
+                                                                                    </button>
+                                                                                    <div className="text-right bg-slate-50 px-4 py-2 rounded-xl border border-slate-100">
+                                                                                        <div className="text-xl font-black text-indigo-600 tabular-nums">{p.avg.toFixed(2)}</div>
+                                                                                        <div className="text-[8px] font-bold text-slate-400 uppercase">Promedio</div>
+                                                                                    </div>
+                                                                                </div>
+                                                                            </div>
+                                                                        );
+                                                                    })}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    )}
                                                 </div>
                                             </div>
                                         );
