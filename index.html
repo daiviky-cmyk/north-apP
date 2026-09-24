@@ -144,10 +144,19 @@
             const [isRecording, setIsRecording] = useState(false);
             const [recordingTime, setRecordingTime] = useState(0);
             const [audioBase64, setAudioBase64] = useState(null);
+            const [audioPreviewUrl, setAudioPreviewUrl] = useState(null);
             const [mediaRecorder, setMediaRecorder] = useState(null);
             const [isSubmitting, setIsSubmitting] = useState(false);
 
             const MAX_RECORDING_TIME = 240;
+
+            useEffect(() => {
+                return () => {
+                    if (audioPreviewUrl) {
+                        URL.revokeObjectURL(audioPreviewUrl);
+                    }
+                };
+            }, [audioPreviewUrl]);
 
             useEffect(() => {
                 let timer;
@@ -169,21 +178,53 @@
 
             const startRecording = async () => {
                 try {
-                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                    const recorder = new MediaRecorder(stream);
+                    const stream = await navigator.mediaDevices.getUserMedia({
+                        audio: true
+                    });
+
+                    let mimeType = '';
+
+                    if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
+                        mimeType = 'audio/webm;codecs=opus';
+                    } else if (MediaRecorder.isTypeSupported('audio/webm')) {
+                        mimeType = 'audio/webm';
+                    } else if (MediaRecorder.isTypeSupported('audio/mp4')) {
+                        mimeType = 'audio/mp4';
+                    }
+
+                    const recorder = mimeType
+                        ? new MediaRecorder(stream, { mimeType })
+                        : new MediaRecorder(stream);
+
                     const chunks = [];
-                    
+
                     recorder.ondataavailable = (e) => {
-                        if (e.data.size > 0) chunks.push(e.data);
+                        if (e.data && e.data.size > 0) {
+                            chunks.push(e.data);
+                        }
                     };
 
                     recorder.onstop = () => {
-                        const blob = new Blob(chunks, { type: 'audio/webm' });
+                        const finalMimeType =
+                            recorder.mimeType ||
+                            mimeType ||
+                            'audio/webm';
+
+                        const blob = new Blob(chunks, {
+                            type: finalMimeType
+                        });
+
+                        // URL temporal para escuchar el audio recién grabado.
+                        const previewUrl = URL.createObjectURL(blob);
+                        setAudioPreviewUrl(previewUrl);
+
+                        // Base64: se conserva para el envío a Google Drive.
                         const reader = new FileReader();
-                        reader.readAsDataURL(blob);
                         reader.onloadend = () => {
                             setAudioBase64(reader.result);
                         };
+                        reader.readAsDataURL(blob);
+
                         stream.getTracks().forEach(track => track.stop());
                     };
 
@@ -191,7 +232,9 @@
                     setMediaRecorder(recorder);
                     setIsRecording(true);
                     setRecordingTime(0);
+
                 } catch (err) {
+                    console.error("Error al grabar:", err);
                     showMessage('Error al acceder al micrófono', 'error');
                 }
             };
@@ -204,6 +247,11 @@
             };
 
             const discardAudio = () => {
+                if (audioPreviewUrl) {
+                    URL.revokeObjectURL(audioPreviewUrl);
+                }
+
+                setAudioPreviewUrl(null);
                 setAudioBase64(null);
                 setRecordingTime(0);
             };
@@ -575,6 +623,10 @@
                                                 });
                                                 setFormScores(initialScores); 
                                                 setFormDeductions(voted?.deductions || {}); 
+                                                if (audioPreviewUrl) {
+                                                    URL.revokeObjectURL(audioPreviewUrl);
+                                                }
+                                                setAudioPreviewUrl(null);
                                                 setAudioBase64(voted?.audioNote && voted?.audioNote.startsWith("data:audio") ? voted.audioNote : null);
                                                 setView('form'); 
                                             }} className={`w-full p-5 rounded-2xl flex justify-between items-center border-2 transition-all ${voted ? 'bg-indigo-50 border-indigo-200' : 'bg-white border-slate-100 shadow-sm'}`}>
@@ -713,7 +765,7 @@
                                                 )}
                                             </div>
 
-                                            {!audioBase64 && !isRecording && (
+                                            {!audioPreviewUrl && !isRecording && (
                                                 <button
                                                     type="button"
                                                     onClick={startRecording}
@@ -733,9 +785,14 @@
                                                 </button>
                                             )}
 
-                                            {audioBase64 && !isRecording && (
+                                            {audioPreviewUrl && !isRecording && (
                                                 <div className="space-y-2 bg-slate-800 p-3 rounded-xl border border-slate-700">
-                                                    <audio src={audioBase64} controls className="w-full h-9 rounded-lg" />
+                                                    <audio
+                                                        src={audioPreviewUrl}
+                                                        controls
+                                                        preload="metadata"
+                                                        className="w-full h-9 rounded-lg"
+                                                    />
                                                     <button
                                                         type="button"
                                                         onClick={discardAudio}
