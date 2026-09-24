@@ -45,14 +45,19 @@
         const Trophy = (props) => <Icon {...props} path={<><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 22V18"/><path d="M14 22V18"/><path d="M18 4H6v7a6 6 0 0 0 12 0V4Z"/></>} />;
         const LogOut = (props) => <Icon {...props} path={<><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></>} />;
         const Cloud = (props) => <Icon {...props} path={<path d="M17.5 19a5.5 5.5 0 0 0 2.5-10.5 8.5 8.5 0 1 0-15.5 1.5A5.5 5.5 0 0 0 4.5 19Z"/>} />;
+        const ChevronRight = (props) => <Icon {...props} path={<polyline points="9 18 15 12 9 6"/>} />;
         const ChevronLeft = (props) => <Icon {...props} path={<polyline points="15 18 9 12 15 6"/>} />;
         const ChevronDown = (props) => <Icon {...props} path={<polyline points="6 9 12 15 18 9"/>} />;
+        const CheckCircle2 = (props) => <Icon {...props} path={<><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/><path d="m9 12 2 2 4-4"/></>} />;
+        const MinusCircle = (props) => <Icon {...props} path={<><circle cx="12" cy="12" r="10"/><line x1="8" x2="16" y1="12" y2="12"/></>} />;
         const UserPlus = (props) => <Icon {...props} path={<><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" x2="19" y1="8" y2="14"/><line x1="16" x2="22" y1="11" y2="11"/></>} />;
         const Plus = (props) => <Icon {...props} path={<><line x1="12" x2="12" y1="5" y2="19"/><line x1="5" x2="19" y1="12" y2="12"/></>} />;
         const ClipboardList = (props) => <Icon {...props} path={<><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4"/><path d="M12 16h4"/><path d="M8 11h.01"/><path d="M8 16h.01"/></>} />;
         const UploadCloud = (props) => <Icon {...props} path={<><path d="m16 13-4-4-4 4"/><path d="M12 9v9"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/><path d="M12 13v9"/></>} />;
         const Trash2 = (props) => <Icon {...props} path={<><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 2-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></>} />;
         const BarChart3 = (props) => <Icon {...props} path={<><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></>} />;
+        const Mic = (props) => <Icon {...props} path={<><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></>} />;
+        const Square = (props) => <Icon {...props} path={<rect width="18" height="18" x="3" y="3" rx="2"/>} />;
         const FileText = (props) => <Icon {...props} path={<><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/><polyline points="10 9 9 9 8 9"/></>} />;
         const Download = (props) => <Icon {...props} path={<><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></>} />;
 
@@ -69,6 +74,7 @@
         const auth = getAuth(app);
         const db = getFirestore(app);
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'north-champions-2026';
+        const GOOGLE_SHEETS_URL = "https://script.google.com/macros/s/AKfycbxbXEeV2VXXW8P6RD9riqkKtaMr2FedlRnWxn21rbd_ZuL88Wbec-elQyOcmOVAOEws/exec";
 
         const LOGO_URL = "./logo.png";
 
@@ -116,12 +122,87 @@
             const [view, setView] = useState('login'); 
             const [scores, setScores] = useState([]);
             const [participants, setParticipants] = useState([]);
+            const [selectedCategory, setSelectedCategory] = useState(null);
+            const [selectedGroup, setSelectedGroup] = useState(null);
+            const [formScores, setFormScores] = useState({}); 
+            const [formDeductions, setFormDeductions] = useState({}); 
+            const [message, setMessage] = useState(null);
+            const [timerRemaining, setTimerRemaining] = useState(0);
+            
+            // Admin states
             const [newParticipantName, setNewParticipantName] = useState('');
             const [bulkList, setBulkList] = useState('');
             const [currentCategory, setCurrentCategory] = useState(CATEGORIAS[0]);
-            const [message, setMessage] = useState(null);
             const [expandedCategories, setExpandedCategories] = useState({});
             const [selectedParticipantForPDF, setSelectedParticipantForPDF] = useState(null);
+
+            // Audio recorder states
+            const [isRecording, setIsRecording] = useState(false);
+            const [recordingTime, setRecordingTime] = useState(0);
+            const [audioBase64, setAudioBase64] = useState(null);
+            const [mediaRecorder, setMediaRecorder] = useState(null);
+            const [isSubmitting, setIsSubmitting] = useState(false);
+
+            const MAX_RECORDING_TIME = 240;
+
+            useEffect(() => {
+                let timer;
+                if (isRecording) {
+                    timer = setInterval(() => {
+                        setRecordingTime(prev => {
+                            if (prev >= MAX_RECORDING_TIME - 1) {
+                                stopRecording();
+                                return MAX_RECORDING_TIME;
+                            }
+                            return prev + 1;
+                        });
+                    }, 1000);
+                } else {
+                    setRecordingTime(0);
+                }
+                return () => clearInterval(timer);
+            }, [isRecording]);
+
+            const startRecording = async () => {
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    const recorder = new MediaRecorder(stream);
+                    const chunks = [];
+                    
+                    recorder.ondataavailable = (e) => {
+                        if (e.data.size > 0) chunks.push(e.data);
+                    };
+
+                    recorder.onstop = () => {
+                        const blob = new Blob(chunks, { type: 'audio/webm' });
+                        const reader = new FileReader();
+                        reader.readAsDataURL(blob);
+                        reader.onloadend = () => {
+                            setAudioBase64(reader.result);
+                        };
+                        stream.getTracks().forEach(track => track.stop());
+                    };
+
+                    recorder.start(1000);
+                    setMediaRecorder(recorder);
+                    setIsRecording(true);
+                    setRecordingTime(0);
+                } catch (err) {
+                    showMessage('Error al acceder al micrófono', 'error');
+                }
+            };
+
+            const stopRecording = () => {
+                if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+                    mediaRecorder.stop();
+                    setIsRecording(false);
+                }
+            };
+
+            const discardAudio = () => {
+                setAudioBase64(null);
+                setRecordingTime(0);
+            };
 
             useEffect(() => {
                 const initAuth = async () => {
@@ -149,17 +230,140 @@
                 return () => { unsubScores(); unsubParticipants(); };
             }, [user]);
 
+            useEffect(() => {
+                let interval;
+                if (timerRemaining > 0) {
+                    interval = setInterval(() => setTimerRemaining(prev => prev - 1), 1000);
+                } else if (timerRemaining === 0 && view === 'success') {
+                    setView('categories');
+                    setSelectedGroup(null);
+                }
+                return () => clearInterval(interval);
+            }, [timerRemaining, view]);
+
             const handleLogin = () => {
                 const found = JURADOS.find(j => j.pass === password);
                 if (found) {
                     setCurrentUserData(found);
                     setView(found.id === 'admin' ? 'admin' : 'categories');
                     setPassword('');
-                    setMessage({ text: `Bienvenido, ${found.name}`, type: 'success' });
-                    setTimeout(() => setMessage(null), 3000);
+                    showMessage(`Bienvenido, ${found.name}`);
                 } else { 
-                    setMessage({ text: 'Contraseña incorrecta', type: 'error' });
-                    setTimeout(() => setMessage(null), 3000);
+                    showMessage('Contraseña incorrecta', 'error'); 
+                }
+            };
+
+            const showMessage = (text, type = 'success') => {
+                setMessage({ text, type });
+                setTimeout(() => setMessage(null), 3000);
+            };
+
+            const toggleDeduction = (deductionId) => {
+                setFormDeductions(prev => ({
+                    ...prev,
+                    [deductionId]: !prev[deductionId]
+                }));
+            };
+
+            const totals = useMemo(() => {
+                const base = CRITERIA.reduce((acc, c) => {
+                    const scoreVal = formScores[c.id];
+                    if (scoreVal === undefined || scoreVal === null || scoreVal === "") return acc;
+                    const parsed = parseFloat(scoreVal);
+                    return acc + (isNaN(parsed) ? 0 : parsed);
+                }, 0);
+                
+                const deductions = DEDUCTIONS_LIST.reduce((acc, d) => {
+                    return acc + (formDeductions[d.id] ? d.value : 0);
+                }, 0);
+
+                return { 
+                    base: parseFloat(base.toFixed(2)), 
+                    deductions: parseFloat(deductions.toFixed(2)), 
+                    final: Math.max(0, parseFloat((base - deductions).toFixed(2))) 
+                };
+            }, [formScores, formDeductions]);
+
+            const isFormIncomplete = useMemo(() => {
+                return CRITERIA.some(c => {
+                    const sVal = formScores[c.id];
+                    return sVal === undefined || sVal === null || sVal === "" || isNaN(parseFloat(sVal));
+                });
+            }, [formScores]);
+
+            const handleValueChange = (criterionId, val) => {
+                if (val === "" || val === undefined || val === null) {
+                    setFormScores(prev => ({ ...prev, [criterionId]: "" }));
+                    return;
+                }
+                const parsed = parseFloat(val);
+                if (isNaN(parsed)) {
+                    setFormScores(prev => ({ ...prev, [criterionId]: "" }));
+                    return;
+                }
+                const clamped = Math.max(0, Math.min(2, Math.round(parsed * 100) / 100));
+                setFormScores(prev => ({ ...prev, [criterionId]: clamped.toFixed(2) }));
+            };
+
+            const saveScore = async (isEdit = false) => {
+                if (!selectedGroup || isSubmitting) return;
+                setIsSubmitting(true);
+
+                const jurorId = currentUserData?.id || 'invitado';
+                const scoreId = `${selectedGroup.id}_${jurorId}`;
+                
+                const cleanScores = {};
+                CRITERIA.forEach(c => {
+                    const rawVal = formScores[c.id];
+                    const parsed = parseFloat(rawVal);
+                    cleanScores[c.id] = (!isNaN(parsed)) ? parseFloat(parsed.toFixed(2)) : 0.00;
+                });
+
+                const payloadFirebase = {
+                    participantId: selectedGroup.id,
+                    participantName: selectedGroup.name,
+                    category: selectedGroup.category,
+                    jurorId: jurorId,
+                    jurorName: currentUserData?.name || 'Jurado',
+                    values: cleanScores,
+                    deductions: formDeductions,
+                    audioNote: audioBase64 || "Sin audio",
+                    baseScore: totals.base,
+                    totalDeductions: totals.deductions,
+                    total: parseFloat(totals.final.toFixed(2)),
+                    timestamp: Date.now(),
+                    hasEdited: isEdit 
+                };
+
+                const payloadSheets = {
+                    ...payloadFirebase,
+                    audioNote: audioBase64 ? "Audio Registrado" : "Sin audio"
+                };
+
+                try {
+                    if (user) {
+                        await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'scores', scoreId), { ...payloadFirebase, timestamp: serverTimestamp() });
+                    }
+                    if (GOOGLE_SHEETS_URL) {
+                        fetch(GOOGLE_SHEETS_URL, { 
+                            method: 'POST', 
+                            mode: 'no-cors', 
+                            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                            body: JSON.stringify(payloadSheets) 
+                        }).catch(() => {});
+                    }
+
+                    setIsSubmitting(false);
+                    if (isEdit) {
+                        showMessage('¡Puntaje actualizado!');
+                        setView('categories');
+                    } else {
+                        setView('success');
+                        setTimerRemaining(20); 
+                    }
+                } catch (error) { 
+                    setIsSubmitting(false);
+                    showMessage('Error al guardar datos', 'error'); 
                 }
             };
 
@@ -174,7 +378,6 @@
                 return parseFloat(sum.toFixed(2));
             };
 
-            // Descarga local del PDF
             const downloadPDFFile = (participant) => {
                 const { jsPDF } = window.jspdf;
                 const doc = new jsPDF();
@@ -263,6 +466,22 @@
                 doc.save(`NorthChampions_${participant.name.replace(/\s+/g, '_')}.pdf`);
             };
 
+            if (view === 'login') return (
+                <div className="min-h-screen bg-slate-950 flex items-center justify-center p-6 text-white text-center">
+                    <div className="w-full max-w-md bg-slate-900 rounded-[3rem] p-12 shadow-2xl border border-slate-800 animate-in">
+                        {LOGO_URL ? (
+                            <img src={LOGO_URL} alt="North Champions Logo" className="h-24 mx-auto mb-6 object-contain drop-shadow-md" onError={(e) => e.target.style.display = 'none'} />
+                        ) : (
+                            <div className="bg-indigo-600 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-8 shadow-lg rotate-3"><Trophy size={32} /></div>
+                        )}
+                        <h1 className="text-2xl font-black uppercase tracking-tighter mb-1">North Champions</h1>
+                        <p className="text-indigo-400 font-bold text-[10px] uppercase tracking-widest mb-12">Acceso de Personal</p>
+                        <input type="password" placeholder="Contraseña" className="w-full bg-slate-800 border-2 border-slate-700 rounded-2xl p-5 mb-6 text-center text-2xl font-black outline-none focus:border-indigo-500 transition-all placeholder:text-slate-700" value={password} onChange={(e) => setPassword(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && handleLogin()} />
+                        <button onClick={handleLogin} className="w-full bg-indigo-600 hover:bg-indigo-500 py-5 rounded-2xl font-black text-lg active:scale-95 transition-all shadow-xl shadow-indigo-600/20 uppercase tracking-widest">INGRESAR</button>
+                    </div>
+                </div>
+            );
+
             return (
                 <div className="min-h-screen bg-slate-50 text-slate-900 pb-10">
                     <header className="bg-slate-950 text-white p-5 sticky top-0 z-50 shadow-xl flex justify-between items-center">
@@ -282,7 +501,7 @@
                                 <span className="text-[9px] font-black uppercase text-slate-500 leading-none mb-1">{currentUserData?.name}</span>
                                 <span className="text-[8px] font-black text-green-500 flex items-center gap-1 uppercase tracking-tighter"><Cloud size={10}/> Sistema Online</span>
                             </div>
-                            <button onClick={() => { setView('login'); setSelectedParticipantForPDF(null); }} className="bg-slate-800 p-2.5 rounded-xl text-slate-400 hover:text-red-400 transition-colors">Salir</button>
+                            <button onClick={() => { setView('login'); setSelectedParticipantForPDF(null); }} className="bg-slate-800 p-2.5 rounded-xl text-slate-400 hover:text-red-400 transition-colors"><LogOut size={20} /></button>
                         </div>
                     </header>
 
@@ -291,14 +510,240 @@
                     )}
 
                     <main className="max-w-2xl mx-auto p-5">
-                        {view === 'login' && (
-                            <div className="min-h-[70vh] flex items-center justify-center">
-                                <div className="w-full max-w-md bg-slate-900 rounded-[3rem] p-12 text-white shadow-2xl border border-slate-800 text-center animate-in">
-                                    <div className="bg-indigo-600 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-8 shadow-lg rotate-3"><Trophy size={32} /></div>
-                                    <h1 className="text-2xl font-black uppercase tracking-tighter mb-1">North Champions</h1>
-                                    <p className="text-indigo-400 font-bold text-[10px] uppercase tracking-widest mb-12">Panel de Administración</p>
-                                    <input type="password" placeholder="Contraseña de Administrador" className="w-full bg-slate-800 border-2 border-slate-700 rounded-2xl p-5 mb-6 text-center text-2xl font-black outline-none focus:border-indigo-500 transition-all placeholder:text-slate-700" value={password} onChange={(e) => setPassword(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && handleLogin()} />
-                                    <button onClick={handleLogin} className="w-full bg-indigo-600 hover:bg-indigo-500 py-5 rounded-2xl font-black text-lg active:scale-95 transition-all shadow-xl shadow-indigo-600/20 uppercase tracking-widest">INGRESAR</button>
+                        {view === 'categories' && (
+                            <div className="space-y-6 animate-in">
+                                <h2 className="text-xl font-black text-slate-800 flex items-center gap-3 px-2 uppercase tracking-tight leading-none">Categorías</h2>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    {CATEGORIAS.map(cat => (
+                                        <button key={cat} onClick={() => { setSelectedCategory(cat); setView('groups'); }} className="bg-white p-6 rounded-[2rem] border-2 border-slate-100 shadow-sm flex justify-between items-center group active:scale-95 transition-all text-left">
+                                            <span className="text-lg font-black text-slate-700">{cat}</span>
+                                            <ChevronRight className="text-slate-200 group-hover:text-indigo-600" />
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {view === 'groups' && (
+                            <div className="space-y-6 animate-in">
+                                <button onClick={() => setView('categories')} className="flex items-center gap-2 text-indigo-600 font-black text-[10px] uppercase mb-4 tracking-widest"><ChevronLeft size={16}/> Volver</button>
+                                <h2 className="text-2xl font-black text-slate-800">División: <span className="text-indigo-600">{selectedCategory}</span></h2>
+                                <div className="space-y-3">
+                                    {participants.filter(p => p.category === selectedCategory).map(p => {
+                                        const voted = scores.find(s => s.participantId === p.id && s.jurorId === currentUserData?.id);
+                                        return (
+                                            <button key={p.id} onClick={() => { 
+                                                setSelectedGroup(p); 
+                                                const initialScores = {};
+                                                CRITERIA.forEach(c => {
+                                                    const prevScore = voted?.values?.[c.id];
+                                                    initialScores[c.id] = (prevScore !== undefined && prevScore !== null) ? parseFloat(prevScore).toFixed(2) : "";
+                                                });
+                                                setFormScores(initialScores); 
+                                                setFormDeductions(voted?.deductions || {}); 
+                                                setAudioBase64(voted?.audioNote && voted?.audioNote.startsWith("data:audio") ? voted.audioNote : null);
+                                                setView('form'); 
+                                            }} className={`w-full p-6 rounded-3xl flex justify-between items-center border-2 transition-all ${voted ? 'bg-indigo-50 border-indigo-200' : 'bg-white border-slate-100 shadow-sm'}`}>
+                                                <div className="text-left font-black text-xl text-slate-800">{p.name} {voted && <div className="text-[9px] font-black text-indigo-600 uppercase mt-1 flex items-center gap-1"><CheckCircle2 size={12}/> Listo</div>}</div>
+                                                <ChevronRight className="text-slate-200" />
+                                            </button>
+                                        );
+                                    })}
+                                    {participants.filter(p => p.category === selectedCategory).length === 0 && <div className="p-16 text-center bg-white rounded-[3rem] border-2 border-dashed border-slate-200 text-slate-400 font-bold uppercase text-[10px]">Sin competidores todavía</div>}
+                                </div>
+                            </div>
+                        )}
+
+                        {view === 'form' && selectedGroup && (
+                            <div className="space-y-8 animate-in">
+                                <button onClick={() => setView('groups')} className="flex items-center gap-2 text-indigo-600 font-black text-[10px] uppercase mb-6"><ChevronLeft size={16}/> Atrás</button>
+                                <div className="bg-white rounded-[3rem] shadow-2xl overflow-hidden border border-slate-200">
+                                    <div className="bg-slate-950 p-8 text-white relative">
+                                        <div className="text-[9px] font-black text-indigo-500 uppercase tracking-widest mb-1">{selectedGroup.category}</div>
+                                        <h2 className="text-3xl font-black tracking-tighter leading-none">{selectedGroup.name}</h2>
+                                    </div>
+                                    <div className="p-8 space-y-12">
+                                        {['Desempeño', 'Habilidades'].map(section => (
+                                            <div key={section} className="space-y-6">
+                                                <h3 className="text-[9px] font-black uppercase text-slate-400 tracking-[0.5em] border-b border-slate-50 pb-2">{section}</h3>
+                                                {CRITERIA.filter(c => section === c.section).map(c => {
+                                                    const rawValue = formScores[c.id];
+                                                    const parsedVal = parseFloat(rawValue);
+                                                    const isSet = rawValue !== undefined && rawValue !== null && rawValue !== "" && !isNaN(parsedVal);
+                                                    return (
+                                                        <div key={c.id} className="space-y-4 bg-slate-50/50 p-5 rounded-3xl border border-slate-100">
+                                                            <div className="flex justify-between items-center">
+                                                                <label className="text-sm font-black text-slate-700 block tracking-tight leading-tight">{c.label}</label>
+                                                                <span className="text-2xl font-black text-indigo-600 tabular-nums">
+                                                                    {isSet ? parsedVal.toFixed(2) : "0.00"}
+                                                                </span>
+                                                            </div>
+                                                            
+                                                            <div className="flex items-center gap-3">
+                                                                <button 
+                                                                    type="button"
+                                                                    onClick={() => {
+                                                                        const current = isSet ? parsedVal : 0.00;
+                                                                        handleValueChange(c.id, current - 0.01);
+                                                                    }}
+                                                                    className="bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 w-12 h-12 rounded-2xl flex items-center justify-center font-black text-2xl shadow-sm active:scale-95 transition-all select-none"
+                                                                >
+                                                                    -
+                                                                </button>
+                                                                
+                                                                <input 
+                                                                    type="text" 
+                                                                    inputMode="decimal" 
+                                                                    placeholder="0.00"
+                                                                    value={rawValue !== undefined ? rawValue : ""} 
+                                                                    onChange={(e) => {
+                                                                        let inputVal = e.target.value.replace(',', '.');
+                                                                        if (inputVal === "") {
+                                                                            setFormScores(prev => ({ ...prev, [c.id]: "" }));
+                                                                            return;
+                                                                        }
+                                                                        if (inputVal === ".") {
+                                                                            setFormScores(prev => ({ ...prev, [c.id]: "0." }));
+                                                                            return;
+                                                                        }
+                                                                        const clean = inputVal.replace(/[^0-9.]/g, '');
+                                                                        const parts = clean.split('.');
+                                                                        if (parts.length > 2) return;
+                                                                        if (parts[1] && parts[1].length > 2) return;
+
+                                                                        const parsedNum = parseFloat(clean);
+                                                                        if (!isNaN(parsedNum)) {
+                                                                            if (parsedNum > 2.0) {
+                                                                                setFormScores(prev => ({ ...prev, [c.id]: "2.00" }));
+                                                                            } else {
+                                                                                setFormScores(prev => ({ ...prev, [c.id]: clean }));
+                                                                            }
+                                                                        }
+                                                                    }}
+                                                                    onFocus={(e) => e.target.select()}
+                                                                    onBlur={() => {
+                                                                        const raw = formScores[c.id];
+                                                                        if (raw === undefined || raw === null || raw === "" || isNaN(parseFloat(raw))) {
+                                                                            handleValueChange(c.id, 0.00);
+                                                                        } else {
+                                                                            handleValueChange(c.id, parseFloat(raw));
+                                                                        }
+                                                                    }}
+                                                                    className="flex-1 bg-white border-2 border-slate-200 rounded-2xl h-12 text-center font-black text-2xl text-slate-800 focus:border-indigo-500 outline-none transition-all"
+                                                                />
+                                                                
+                                                                <button 
+                                                                    type="button"
+                                                                    onClick={() => {
+                                                                        const current = isSet ? parsedVal : 0.00;
+                                                                        handleValueChange(c.id, current + 0.01);
+                                                                    }}
+                                                                    className="bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 w-12 h-12 rounded-2xl flex items-center justify-center font-black text-2xl shadow-sm active:scale-95 transition-all select-none"
+                                                                >
+                                                                    +
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        ))}
+
+                                        <div className="bg-red-50/40 p-6 rounded-[2.5rem] border border-red-100 space-y-5">
+                                            <h3 className="text-[9px] font-black uppercase text-red-500 tracking-[0.5em] flex items-center gap-2"><MinusCircle size={14}/> Penalizaciones</h3>
+                                            <div className="space-y-2">
+                                                {DEDUCTIONS_LIST.map(d => (
+                                                    <button 
+                                                        key={d.id} 
+                                                        type="button"
+                                                        onClick={() => toggleDeduction(d.id)} 
+                                                        className={`w-full p-4 rounded-2xl flex justify-between items-center transition-all border ${formDeductions[d.id] ? 'bg-red-600 text-white border-red-700 shadow-md' : 'bg-white text-slate-600 border-slate-200'}`}
+                                                    >
+                                                        <span className="text-[11px] font-bold text-left pr-4 leading-tight">{d.label}</span>
+                                                        <span className={`text-[10px] font-black ${formDeductions[d.id] ? 'text-white' : 'text-red-500'}`}>-{d.value.toFixed(2)}</span>
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+
+                                        {/* Audio Recorder */}
+                                        <div className="bg-slate-900 text-white p-6 rounded-[2.5rem] space-y-4 shadow-xl">
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-[10px] font-black uppercase tracking-[0.25em] text-indigo-400 flex items-center gap-2">
+                                                    <Mic size={14}/> Nota de Voz (Opcional)
+                                                </span>
+                                                {isRecording && (
+                                                    <span className="text-[10px] font-black text-red-400 animate-pulse flex items-center gap-1 uppercase">
+                                                        ● Grabando ({Math.floor(recordingTime / 60)}:{String(recordingTime % 60).padStart(2, '0')})
+                                                    </span>
+                                                )}
+                                            </div>
+
+                                            {!audioBase64 && !isRecording && (
+                                                <button
+                                                    type="button"
+                                                    onClick={startRecording}
+                                                    className="w-full bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white py-4 rounded-2xl font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 active:scale-95 transition-all"
+                                                >
+                                                    <Mic size={18} className="text-indigo-400" /> Grabar Comentario
+                                                </button>
+                                            )}
+
+                                            {isRecording && (
+                                                <button
+                                                    type="button"
+                                                    onClick={stopRecording}
+                                                    className="w-full bg-red-600 hover:bg-red-500 text-white py-4 rounded-2xl font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 active:scale-95 transition-all shadow-lg shadow-red-600/30"
+                                                >
+                                                    <Square size={18} /> Detener Grabación
+                                                </button>
+                                            )}
+
+                                            {audioBase64 && !isRecording && (
+                                                <div className="space-y-3 bg-slate-800 p-4 rounded-2xl border border-slate-700">
+                                                    <audio src={audioBase64} controls className="w-full h-10 rounded-xl" />
+                                                    <button
+                                                        type="button"
+                                                        onClick={discardAudio}
+                                                        className="text-[10px] text-red-400 font-black uppercase tracking-wider hover:text-red-300 flex items-center gap-1 mx-auto"
+                                                    >
+                                                        <Trash2 size={12} /> Borrar audio
+                                                    </button>
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        <div className="pt-8 border-t sticky bottom-0 bg-white pb-4 z-10">
+                                            <div className="space-y-1 mb-6 px-1">
+                                                <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest text-slate-400"><span>Puntaje Base</span><span>{totals.base.toFixed(2)} / 20.00</span></div>
+                                                <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest text-red-500/70"><span>Penalizaciones</span><span>-{totals.deductions.toFixed(2)}</span></div>
+                                                <div className="flex justify-between items-end mt-4 pt-3 border-t border-slate-100">
+                                                    <span className="font-black text-slate-400 uppercase text-[10px] tracking-widest">Total</span>
+                                                    <span className="text-6xl font-black text-indigo-600 tabular-nums leading-none tracking-tighter">{totals.final.toFixed(2)}</span>
+                                                </div>
+                                            </div>
+                                            <button 
+                                                disabled={isFormIncomplete || isSubmitting} 
+                                                onClick={() => saveScore(scores.some(s => s.participantId === selectedGroup.id && s.jurorId === currentUserData?.id))} 
+                                                className={`w-full py-6 rounded-[2rem] font-black text-xl shadow-xl transition-all uppercase tracking-widest ${isFormIncomplete || isSubmitting ? 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none' : 'bg-indigo-600 text-white active:scale-95'}`}
+                                            >
+                                                {isSubmitting ? 'GUARDANDO...' : 'ENVIAR VOTO'}
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {view === 'success' && (
+                            <div className="py-20 text-center animate-in zoom-in">
+                                <div className="bg-green-100 text-green-600 w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-8 shadow-inner shadow-green-200/50"><CheckCircle2 size={56} /></div>
+                                <h2 className="text-4xl font-black text-slate-900 mb-2 tracking-tight uppercase">¡Enviado!</h2>
+                                <div className="bg-white p-10 rounded-[3.5rem] shadow-2xl border border-amber-100 w-full max-w-sm mx-auto mt-10">
+                                    <div className="text-6xl font-black text-amber-500 mb-2 tabular-nums tracking-tighter">{timerRemaining}s</div>
+                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-10">Ventana de corrección</p>
+                                    <button onClick={() => setView('form')} className="w-full bg-amber-500 text-white py-5 rounded-2xl font-black text-lg active:scale-95 uppercase shadow-xl shadow-amber-500/20">EDITAR</button>
+                                    <button onClick={() => { setView('categories'); setSelectedGroup(null); }} className="w-full mt-6 text-slate-400 font-black text-[10px] uppercase">Finalizar ahora</button>
                                 </div>
                             </div>
                         )}
@@ -322,8 +767,7 @@
                                                     if (!newParticipantName.trim()) return;
                                                     await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'participants'), { name: newParticipantName.trim(), category: currentCategory, createdAt: Date.now() });
                                                     setNewParticipantName('');
-                                                    setMessage({ text: 'Participante registrado', type: 'success' });
-                                                    setTimeout(() => setMessage(null), 3000);
+                                                    showMessage('Participante registrado');
                                                 }} className="w-full bg-indigo-600 text-white py-4 rounded-2xl font-black uppercase tracking-widest active:scale-95 transition-all shadow-lg shadow-indigo-600/10">Agregar</button>
                                             </div>
                                         </div>
@@ -341,8 +785,7 @@
                                                     });
                                                     await batch.commit();
                                                     setBulkList('');
-                                                    setMessage({ text: `${names.length} sincronizados`, type: 'success' });
-                                                    setTimeout(() => setMessage(null), 3000);
+                                                    showMessage(`${names.length} sincronizados`);
                                                 }} className="w-full bg-slate-900 text-white py-4 rounded-2xl font-black uppercase tracking-widest active:scale-95 flex items-center justify-center gap-2">
                                                     <UploadCloud size={18}/> PROCESAR
                                                 </button>
@@ -445,7 +888,6 @@
                             </div>
                         )}
 
-                        {/* VISTA PREVIA DETALLADA / PDF EN PANTALLA */}
                         {view === 'admin' && selectedParticipantForPDF && (
                             <div className="space-y-6 animate-in pb-20">
                                 <div className="flex items-center justify-between bg-white px-6 py-4 rounded-2xl border border-slate-200 shadow-sm">
