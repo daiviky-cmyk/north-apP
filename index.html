@@ -130,6 +130,7 @@
             const [formDeductions, setFormDeductions] = useState({}); 
             const [message, setMessage] = useState(null);
             const [timerRemaining, setTimerRemaining] = useState(0);
+            const [editingVote, setEditingVote] = useState(false);
             
             // Admin states
             const [searchTerm, setSearchTerm] = useState('');
@@ -292,9 +293,13 @@
                 } else if (timerRemaining === 0 && view === 'success') {
                     setView('categories');
                     setSelectedGroup(null);
+                    setEditingVote(false);
+                } else if (timerRemaining === 0 && editingVote) {
+                    setEditingVote(false);
+                    setView('groups');
                 }
                 return () => clearInterval(interval);
-            }, [timerRemaining, view]);
+            }, [timerRemaining, view, editingVote]);
 
             const handleLogin = () => {
                 const found = JURADOS.find(j => j.pass === password);
@@ -414,9 +419,26 @@
 
             const saveScore = async (isEdit = false) => {
                 if (!selectedGroup || isSubmitting) return;
-                setIsSubmitting(true);
 
                 const jurorId = currentUserData?.id || 'invitado';
+                const existingVote = scores.find(s => s.participantId === selectedGroup.id && s.jurorId === jurorId);
+                if (existingVote && !isEdit) {
+                    showMessage('Este participante ya fue votado', 'error');
+                    setView('groups');
+                    return;
+                }
+                if (isEdit && !existingVote) {
+                    showMessage('No se encontró la votación para editar', 'error');
+                    setView('groups');
+                    return;
+                }
+                if (isEdit && timerRemaining <= 0) {
+                    showMessage('El tiempo para editar ya terminó', 'error');
+                    setView('groups');
+                    return;
+                }
+
+                setIsSubmitting(true);
                 const scoreId = `${selectedGroup.id}_${jurorId}`;
                 
                 const cleanScores = {};
@@ -465,8 +487,10 @@
                     setIsSubmitting(false);
                     if (isEdit) {
                         showMessage('¡Puntaje actualizado!');
-                        setView('categories');
+                        setEditingVote(false);
+                        setView('success');
                     } else {
+                        setEditingVote(false);
                         setView('success');
                         setTimerRemaining(20); 
                     }
@@ -671,23 +695,24 @@
                                     {participants.filter(p => p.category === selectedCategory).map(p => {
                                         const voted = scores.find(s => s.participantId === p.id && s.jurorId === currentUserData?.id);
                                         return (
-                                            <button key={p.id} onClick={() => { 
+                                            <button key={p.id} disabled={!!voted} onClick={() => { 
+                                                if (voted) return;
                                                 setSelectedGroup(p); 
+                                                setEditingVote(false);
                                                 const initialScores = {};
                                                 CRITERIA.forEach(c => {
-                                                    const prevScore = voted?.values?.[c.id];
-                                                    initialScores[c.id] = (prevScore !== undefined && prevScore !== null) ? parseFloat(prevScore).toFixed(2) : "";
+                                                    initialScores[c.id] = "";
                                                 });
                                                 setFormScores(initialScores); 
-                                                setFormDeductions(voted?.deductions || {}); 
+                                                setFormDeductions({}); 
                                                 if (audioPreviewUrl) {
                                                     URL.revokeObjectURL(audioPreviewUrl);
                                                 }
                                                 setAudioPreviewUrl(null);
-                                                setAudioBase64(voted?.audioNote && voted?.audioNote.startsWith("data:audio") ? voted.audioNote : null);
+                                                setAudioBase64(null);
                                                 setView('form'); 
-                                            }} className={`w-full p-5 rounded-2xl flex justify-between items-center border-2 transition-all ${voted ? 'bg-indigo-50 border-indigo-200' : 'bg-white border-slate-100 shadow-sm'}`}>
-                                                <div className="text-left font-black text-lg text-slate-800">{p.name} <span className="text-xs font-bold text-slate-400">({p.memberCount || 1} part.)</span> {voted && <div className="text-[9px] font-black text-indigo-600 uppercase mt-0.5 flex items-center gap-1"><CheckCircle2 size={12}/> Votado</div>}</div>
+                                            }} className={`w-full p-5 rounded-2xl flex justify-between items-center border-2 transition-all ${voted ? 'bg-slate-100 border-slate-200 opacity-70 cursor-not-allowed' : 'bg-white border-slate-100 shadow-sm active:scale-[0.99]'}`}>
+                                                <div className="text-left font-black text-lg text-slate-800">{p.name} <span className="text-xs font-bold text-slate-400">({p.memberCount || 1} part.)</span> {voted && <div className="text-[9px] font-black text-slate-500 uppercase mt-0.5 flex items-center gap-1"><CheckCircle2 size={12}/> Votación cerrada</div>}</div>
                                                 <ChevronRight className="text-slate-300" size={20} />
                                             </button>
                                         );
@@ -872,10 +897,10 @@
                                             </div>
                                             <button 
                                                 disabled={isFormIncomplete || isSubmitting} 
-                                                onClick={() => saveScore(scores.some(s => s.participantId === selectedGroup.id && s.jurorId === currentUserData?.id))} 
+                                                onClick={() => saveScore(editingVote)} 
                                                 className={`w-full py-5 rounded-2xl font-black text-lg shadow-xl transition-all uppercase tracking-widest ${isFormIncomplete || isSubmitting ? 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none' : 'bg-indigo-600 text-white active:scale-95'}`}
                                             >
-                                                {isSubmitting ? 'GUARDANDO...' : 'ENVIAR VOTO'}
+                                                {isSubmitting ? 'GUARDANDO...' : (editingVote ? 'ACTUALIZAR VOTO' : 'ENVIAR VOTO')}
                                             </button>
                                         </div>
                                     </div>
@@ -889,9 +914,24 @@
                                 <h2 className="text-3xl font-black text-slate-900 mb-1 uppercase tracking-tight">¡Enviado!</h2>
                                 <div className="bg-white p-8 rounded-[2.5rem] shadow-xl border border-amber-100 w-full max-w-xs mx-auto mt-8">
                                     <div className="text-5xl font-black text-amber-500 mb-2 tabular-nums tracking-tighter">{timerRemaining}s</div>
-                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-8">Ventana de corrección</p>
-                                    <button onClick={() => setView('form')} className="w-full bg-amber-500 text-white py-4 rounded-xl font-black text-base active:scale-95 uppercase shadow-lg shadow-amber-500/20">EDITAR</button>
-                                    <button onClick={() => { setView('categories'); setSelectedGroup(null); }} className="w-full mt-4 text-slate-400 font-black text-[10px] uppercase">Finalizar ahora</button>
+                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6">Votación registrada. Podés corregirla durante 20 segundos.</p>
+                                    {timerRemaining > 0 && (
+                                        <button
+                                            onClick={() => {
+                                                const jurorId = currentUserData?.id || 'invitado';
+                                                const existingVote = scores.find(s => s.participantId === selectedGroup?.id && s.jurorId === jurorId);
+                                                if (!existingVote || timerRemaining <= 0) return;
+                                                setFormScores(existingVote.values || {});
+                                                setFormDeductions(existingVote.deductions || {});
+                                                setEditingVote(true);
+                                                setView('form');
+                                            }}
+                                            className="w-full bg-amber-500 text-white py-4 rounded-xl font-black text-base active:scale-95 uppercase shadow-lg shadow-amber-500/20 mb-3"
+                                        >
+                                            EDITAR VOTACIÓN
+                                        </button>
+                                    )}
+                                    <button onClick={() => { setTimerRemaining(0); setEditingVote(false); setView('categories'); setSelectedGroup(null); }} className="w-full bg-indigo-600 text-white py-4 rounded-xl font-black text-base active:scale-95 uppercase shadow-lg shadow-indigo-600/20">Continuar</button>
                                 </div>
                             </div>
                         )}
