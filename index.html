@@ -72,6 +72,8 @@
         const db = getFirestore(app);
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'north-champions-2026';
         const GOOGLE_SHEETS_URL = "https://script.google.com/macros/s/AKfycbxbXEeV2VXXW8P6RD9riqkKtaMr2FedlRnWxn21rbd_ZuL88Wbec-elQyOcmOVAOEws/exec";
+        const AUDIO_DRIVE_URL = "PEGA_AQUI_LA_URL_DE_TU_APPS_SCRIPT_DE_AUDIO";
+        const AUDIO_DRIVE_URL = "PEGA_AQUI_LA_URL_DE_TU_APPS_SCRIPT_DE_AUDIO";
 
         const LOGO_URL = "./logo.png";
 
@@ -129,7 +131,6 @@
             const [newParticipantName, setNewParticipantName] = useState('');
             const [bulkList, setBulkList] = useState('');
             const [currentCategory, setCurrentCategory] = useState(CATEGORIAS[0]);
-            const [isSubmitting, setIsSubmitting] = useState(false);
 
             // Audio Recorder
             const [isRecording, setIsRecording] = useState(false);
@@ -160,7 +161,8 @@
             const startRecording = async () => {
                 try {
                     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                    const recorder = new MediaRecorder(stream);
+                    const options = { mimeType: 'audio/webm;codecs=opus' };
+                    const recorder = new MediaRecorder(stream, MediaRecorder.isTypeSupported(options.mimeType) ? options : {});
                     const chunks = [];
                     
                     recorder.ondataavailable = (e) => {
@@ -168,7 +170,7 @@
                     };
 
                     recorder.onstop = () => {
-                        const blob = new Blob(chunks, { type: 'audio/webm' });
+                        const blob = new Blob(chunks, { type: recorder.mimeType || 'audio/webm' });
                         const reader = new FileReader();
                         reader.readAsDataURL(blob);
                         reader.onloadend = () => {
@@ -340,8 +342,34 @@
             };
 
             const saveScore = async (isEdit = false) => {
-                if (!selectedGroup || isSubmitting) return;
-                setIsSubmitting(true);
+                if (!selectedGroup) return;
+                
+                let finalAudioUrl = "Sin audio";
+
+                // Subida directa del audio a Google Drive vía Apps Script
+                if (audioBase64) {
+                    try {
+                        const driveRes = await fetch(AUDIO_DRIVE_URL, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                            body: JSON.stringify({
+                                audio: audioBase64,
+                                participantName: selectedGroup.name,
+                                category: selectedGroup.category,
+                                jurorName: currentUserData?.name || 'Jurado'
+                            })
+                        });
+
+                        const driveData = await driveRes.json();
+                        if (driveData.success) {
+                            finalAudioUrl = driveData.directLink || driveData.url;
+                        } else {
+                            console.error("Respuesta de Drive sin éxito:", driveData.error);
+                        }
+                    } catch (errAudio) {
+                        console.error("Error al subir audio a Google Drive:", errAudio);
+                    }
+                }
 
                 const jurorId = currentUserData?.id || 'invitado';
                 const scoreId = `${selectedGroup.id}_${jurorId}`;
@@ -353,11 +381,7 @@
                     cleanScores[c.id] = (!isNaN(parsed)) ? parseFloat(parsed.toFixed(2)) : 0.00;
                 });
 
-                // Si el audio es muy largo para Google Sheets, guardamos indicador en Sheet y audio en Firebase
-                const hasAudio = !!audioBase64;
-                const audioStatusText = hasAudio ? "Audio Registrado" : "Sin audio";
-
-                const payloadFirebase = {
+                const payload = {
                     participantId: selectedGroup.id,
                     participantName: selectedGroup.name,
                     category: selectedGroup.category,
@@ -365,7 +389,7 @@
                     jurorName: currentUserData?.name || 'Jurado',
                     values: cleanScores,
                     deductions: formDeductions,
-                    audioNote: audioBase64 || "Sin audio",
+                    audioNote: finalAudioUrl,
                     baseScore: totals.base,
                     totalDeductions: totals.deductions,
                     total: parseFloat(totals.final.toFixed(2)),
@@ -373,28 +397,18 @@
                     hasEdited: isEdit 
                 };
 
-                const payloadSheets = {
-                    ...payloadFirebase,
-                    audioNote: audioStatusText // Evita romper límites de celda en Sheets
-                };
-
                 try {
-                    // 1. Guardar siempre en Firebase (Base principal)
                     if (user) {
-                        await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'scores', scoreId), { ...payloadFirebase, timestamp: serverTimestamp() });
+                        await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'scores', scoreId), { ...payload, timestamp: serverTimestamp() });
                     }
-                    
-                    // 2. Notificar a Google Sheets
                     if (GOOGLE_SHEETS_URL) {
-                        fetch(GOOGLE_SHEETS_URL, { 
+                        await fetch(GOOGLE_SHEETS_URL, { 
                             method: 'POST', 
                             mode: 'no-cors', 
                             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                            body: JSON.stringify(payloadSheets) 
-                        }).catch(() => console.log("Aviso: Sincronización Sheet en segundo plano"));
+                            body: JSON.stringify(payload) 
+                        }).catch(console.error);
                     }
-
-                    setIsSubmitting(false);
                     if (isEdit) {
                         showMessage('¡Puntaje actualizado!');
                         setView('categories');
@@ -403,8 +417,7 @@
                         setTimerRemaining(20); 
                     }
                 } catch (error) { 
-                    setIsSubmitting(false);
-                    showMessage('Error de conexión. Intente nuevamente.', 'error'); 
+                    showMessage('Error al guardar datos', 'error'); 
                 }
             };
 
@@ -496,7 +509,7 @@
                                                 });
                                                 setFormScores(initialScores); 
                                                 setFormDeductions(voted?.deductions || {}); 
-                                                setAudioBase64(voted?.audioNote && voted?.audioNote.startsWith("data:audio") ? voted.audioNote : null);
+                                                setAudioBase64(voted?.audioNote || null);
                                                 setView('form'); 
                                             }} className={`w-full p-6 rounded-3xl flex justify-between items-center border-2 transition-all ${voted ? 'bg-indigo-50 border-indigo-200' : 'bg-white border-slate-100 shadow-sm'}`}>
                                                 <div className="text-left font-black text-xl text-slate-800">{p.name} {voted && <div className="text-[9px] font-black text-indigo-600 uppercase mt-1 flex items-center gap-1"><CheckCircle2 size={12}/> Listo</div>}</div>
@@ -621,15 +634,15 @@
                                             </div>
                                         </div>
 
-                                        {/* Grabación de Audio */}
+                                        {/* Audio recorder */}
                                         <div className="bg-slate-900 text-white p-6 rounded-[2.5rem] space-y-4 shadow-xl">
                                             <div className="flex justify-between items-center">
                                                 <span className="text-[10px] font-black uppercase tracking-[0.25em] text-indigo-400 flex items-center gap-2">
-                                                    <Mic size={14}/> Nota de Voz (Opcional)
+                                                    <Mic size={14}/> Retroalimentación de Voz (Opcional)
                                                 </span>
                                                 {isRecording && (
                                                     <span className="text-[10px] font-black text-red-400 animate-pulse flex items-center gap-1 uppercase">
-                                                        ● Grabando ({Math.floor(recordingTime / 60)}:{String(recordingTime % 60).padStart(2, '0')})
+                                                        ● Grabando ({Math.floor(recordingTime / 60)}:{String(recordingTime % 60).padStart(2, '0')} / 4:00)
                                                     </span>
                                                 )}
                                             </div>
@@ -662,7 +675,7 @@
                                                         onClick={discardAudio}
                                                         className="text-[10px] text-red-400 font-black uppercase tracking-wider hover:text-red-300 flex items-center gap-1 mx-auto"
                                                     >
-                                                        <Trash2 size={12} /> Borrar audio
+                                                        <Trash2 size={12} /> Borrar y volver a grabar
                                                     </button>
                                                 </div>
                                             )}
@@ -677,13 +690,7 @@
                                                     <span className="text-6xl font-black text-indigo-600 tabular-nums leading-none tracking-tighter">{totals.final.toFixed(2)}</span>
                                                 </div>
                                             </div>
-                                            <button 
-                                                disabled={isFormIncomplete || isSubmitting} 
-                                                onClick={() => saveScore(scores.some(s => s.participantId === selectedGroup.id && s.jurorId === currentUserData?.id))} 
-                                                className={`w-full py-6 rounded-[2rem] font-black text-xl shadow-xl transition-all uppercase tracking-widest ${isFormIncomplete || isSubmitting ? 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none' : 'bg-indigo-600 text-white active:scale-95'}`}
-                                            >
-                                                {isSubmitting ? 'GUARDANDO...' : 'ENVIAR VOTO'}
-                                            </button>
+                                            <button disabled={isFormIncomplete} onClick={() => saveScore(scores.some(s => s.participantId === selectedGroup.id && s.jurorId === currentUserData?.id))} className={`w-full py-6 rounded-[2rem] font-black text-xl shadow-xl transition-all uppercase tracking-widest ${isFormIncomplete ? 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none' : 'bg-indigo-600 text-white active:scale-95'}`}>ENVIAR VOTO</button>
                                         </div>
                                     </div>
                                 </div>
@@ -764,10 +771,10 @@
                                                         <td className="p-4"><span className="bg-indigo-500/20 text-indigo-400 px-3 py-1 rounded-full text-[8px] uppercase font-black tracking-tighter">{s.category}</span></td>
                                                         <td className="p-4 text-white text-xs leading-none">{s.participantName}</td>
                                                         <td className="p-4 text-center">
-                                                            {s.audioNote && s.audioNote.startsWith("data:audio") ? (
+                                                            {s.audioNote && s.audioNote !== "Sin audio" ? (
                                                                 <audio src={s.audioNote} controls className="h-8 w-28 min-w-[110px] inline-block" />
                                                             ) : (
-                                                                <span className="text-slate-500 font-mono text-[9px]">{s.audioNote || "-"}</span>
+                                                                <span className="text-slate-600 font-mono text-[9px]">-</span>
                                                             )}
                                                         </td>
                                                         <td className="p-4 text-right text-slate-400">{s.baseScore?.toFixed(2)}</td>
