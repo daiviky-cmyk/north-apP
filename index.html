@@ -130,7 +130,7 @@
             const [bulkList, setBulkList] = useState('');
             const [currentCategory, setCurrentCategory] = useState(CATEGORIAS[0]);
 
-            // Audio Recorder
+            // Audio Recorder Optimizado para bitrate bajo (MP3 ultra liviano)
             const [isRecording, setIsRecording] = useState(false);
             const [recordingTime, setRecordingTime] = useState(0);
             const [audioBase64, setAudioBase64] = useState(null);
@@ -158,9 +158,21 @@
 
             const startRecording = async () => {
                 try {
-                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                    const options = { mimeType: 'audio/webm;codecs=opus' };
-                    const recorder = new MediaRecorder(stream, MediaRecorder.isTypeSupported(options.mimeType) ? options : {});
+                    // Audio Mono a 24 kbps para peso mínimo de archivo
+                    const stream = await navigator.mediaDevices.getUserMedia({ 
+                        audio: { channelCount: 1, sampleRate: 16000 } 
+                    });
+
+                    const options = { 
+                        mimeType: 'audio/webm;codecs=opus',
+                        audioBitsPerSecond: 24000 
+                    };
+
+                    const recorder = new MediaRecorder(
+                        stream, 
+                        MediaRecorder.isTypeSupported(options.mimeType) ? options : {}
+                    );
+                    
                     const chunks = [];
                     
                     recorder.ondataavailable = (e) => {
@@ -168,7 +180,7 @@
                     };
 
                     recorder.onstop = () => {
-                        const blob = new Blob(chunks, { type: recorder.mimeType || 'audio/webm' });
+                        const blob = new Blob(chunks, { type: 'audio/webm' });
                         const reader = new FileReader();
                         reader.readAsDataURL(blob);
                         reader.onloadend = () => {
@@ -362,7 +374,6 @@
                     audioNote: audioBase64 || null,
                     baseScore: totals.base,
                     totalDeductions: totals.deductions,
-                    penalizacionMonto: totals.deductions.toFixed(2),
                     total: parseFloat(totals.final.toFixed(2)),
                     timestamp: Date.now(),
                     hasEdited: isEdit 
@@ -376,7 +387,7 @@
                         fetch(GOOGLE_SHEETS_URL, { 
                             method: 'POST', 
                             mode: 'no-cors', 
-                            headers: { 'Content-Type': 'text/plain' },
+                            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                             body: JSON.stringify(payload) 
                         }).catch(console.error);
                     }
