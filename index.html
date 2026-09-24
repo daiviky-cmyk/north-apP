@@ -166,7 +166,6 @@
                 setExpandedCategories(prev => ({ ...prev, [cat]: !prev[cat] }));
             };
 
-            // Suma total de los puntajes de todos los jurados para un participante
             const getTotalScoreSum = (groupId) => {
                 const groupScores = scores.filter(s => s.participantId === groupId);
                 if (groupScores.length === 0) return 0;
@@ -174,7 +173,7 @@
                 return parseFloat(sum.toFixed(2));
             };
 
-            // Función para exportar PDF con nombres completos de ítems y lista de penalizaciones aplicadas
+            // Función para generar y descargar localmente el PDF detallado
             const exportParticipantPDF = (participant) => {
                 const { jsPDF } = window.jspdf;
                 const doc = new jsPDF();
@@ -237,7 +236,7 @@
                             });
                         }
 
-                        // Penalizaciones aplicadas por este jurado
+                        // Penalizaciones aplicadas
                         y += 2;
                         if (y > 265) { doc.addPage(); y = 20; }
                         doc.setFont("Helvetica", "bold");
@@ -264,6 +263,7 @@
                     });
                 }
 
+                // Descarga directa local al dispositivo
                 doc.save(`NorthChampions_${participant.name.replace(/\s+/g, '_')}.pdf`);
             };
 
@@ -309,6 +309,14 @@
 
                         {view === 'admin' && (
                             <div className="space-y-12 pb-20 animate-in">
+                                {/* Botón de Volver / Salir del Admin */}
+                                <div className="flex justify-between items-center bg-white px-6 py-4 rounded-2xl border border-slate-200 shadow-sm">
+                                    <button onClick={() => setView('login')} className="flex items-center gap-2 text-indigo-600 font-black text-xs uppercase tracking-widest hover:text-indigo-800 transition-colors">
+                                        <ChevronLeft size={18} /> Volver al Login
+                                    </button>
+                                    <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Panel de Control</span>
+                                </div>
+
                                 <div className="bg-white p-8 rounded-[3rem] border border-slate-200 shadow-xl space-y-8">
                                     <div className="flex items-center gap-3 border-b border-slate-50 pb-4">
                                         <div className="bg-indigo-50 p-3 rounded-2xl text-indigo-600"><UserPlus size={24}/></div>
@@ -360,7 +368,7 @@
                                                 <div key={p.id} className="flex justify-between items-center bg-slate-50 p-4 rounded-2xl border border-slate-100">
                                                     <div><div className="font-bold text-slate-800 leading-none mb-1">{p.name}</div><div className="text-[9px] font-black text-indigo-500 uppercase tracking-tighter">{p.category}</div></div>
                                                     <div className="flex items-center gap-2">
-                                                        <button onClick={() => exportParticipantPDF(p)} className="bg-indigo-50 text-indigo-600 hover:bg-indigo-100 p-2 rounded-xl text-xs font-black uppercase flex items-center gap-1 transition-colors"><FileText size={14}/> PDF</button>
+                                                        <button onClick={() => exportParticipantPDF(p)} className="bg-indigo-50 text-indigo-600 hover:bg-indigo-100 px-3 py-2 rounded-xl text-xs font-black uppercase flex items-center gap-1 transition-colors"><FileText size={14}/> Guardar PDF</button>
                                                         <button onClick={async () => await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'participants', p.id))} className="text-slate-300 hover:text-red-600 transition-colors p-2"><Trash2 size={18} /></button>
                                                     </div>
                                                 </div>
@@ -378,7 +386,6 @@
                                         const catParticipants = participants.filter(p => p.category === cat);
                                         if (catParticipants.length === 0) return null;
                                         
-                                        // Ordenados de mayor a menor según la SUMA TOTAL de los 3 jurados
                                         const rankedAll = catParticipants.map(p => ({ ...p, totalSum: getTotalScoreSum(p.id) })).sort((a, b) => b.totalSum - a.totalSum);
                                         const top3 = rankedAll.slice(0, 3);
                                         const rest = rankedAll.slice(3);
@@ -412,7 +419,6 @@
                                                     ))}
                                                 </div>
 
-                                                {/* Desplegable para el resto del ranking */}
                                                 {rest.length > 0 && (
                                                     <div className="pt-2">
                                                         <button 
