@@ -130,7 +130,7 @@
             const [bulkList, setBulkList] = useState('');
             const [currentCategory, setCurrentCategory] = useState(CATEGORIAS[0]);
 
-            // Audio Recorder Optimizado para bitrate bajo (MP3 ultra liviano)
+            // Audio Recorder
             const [isRecording, setIsRecording] = useState(false);
             const [recordingTime, setRecordingTime] = useState(0);
             const [audioBase64, setAudioBase64] = useState(null);
@@ -158,21 +158,9 @@
 
             const startRecording = async () => {
                 try {
-                    // Audio Mono a 24 kbps para peso mínimo de archivo
-                    const stream = await navigator.mediaDevices.getUserMedia({ 
-                        audio: { channelCount: 1, sampleRate: 16000 } 
-                    });
-
-                    const options = { 
-                        mimeType: 'audio/webm;codecs=opus',
-                        audioBitsPerSecond: 24000 
-                    };
-
-                    const recorder = new MediaRecorder(
-                        stream, 
-                        MediaRecorder.isTypeSupported(options.mimeType) ? options : {}
-                    );
-                    
+                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    const options = { mimeType: 'audio/webm;codecs=opus' };
+                    const recorder = new MediaRecorder(stream, MediaRecorder.isTypeSupported(options.mimeType) ? options : {});
                     const chunks = [];
                     
                     recorder.ondataavailable = (e) => {
@@ -180,7 +168,7 @@
                     };
 
                     recorder.onstop = () => {
-                        const blob = new Blob(chunks, { type: 'audio/webm' });
+                        const blob = new Blob(chunks, { type: recorder.mimeType || 'audio/webm' });
                         const reader = new FileReader();
                         reader.readAsDataURL(blob);
                         reader.onloadend = () => {
@@ -353,6 +341,31 @@
 
             const saveScore = async (isEdit = false) => {
                 if (!selectedGroup) return;
+                
+                let finalAudioUrl = "Sin audio";
+
+                // Subida directa del audio a Cloudinary
+                if (audioBase64) {
+                    try {
+                        const formData = new FormData();
+                        formData.append('file', audioBase64);
+                        formData.append('upload_preset', 'gahpm03b'); // <-- CAMBIAR POR TU PRESET
+                        formData.append('folder', `North_Champions/${selectedGroup.category}`);
+
+                        const cloudRes = await fetch('https://api.cloudinary.com/v1_1/xd2bkxj2/video/upload', { // <-- CAMBIAR POR TU CLOUD NAME
+                            method: 'POST',
+                            body: formData
+                        });
+
+                        const cloudData = await cloudRes.json();
+                        if (cloudData.secure_url) {
+                            finalAudioUrl = cloudData.secure_url;
+                        }
+                    } catch (errAudio) {
+                        console.error("Error al subir audio a Cloudinary:", errAudio);
+                    }
+                }
+
                 const jurorId = currentUserData?.id || 'invitado';
                 const scoreId = `${selectedGroup.id}_${jurorId}`;
                 
@@ -371,7 +384,7 @@
                     jurorName: currentUserData?.name || 'Jurado',
                     values: cleanScores,
                     deductions: formDeductions,
-                    audioNote: audioBase64 || null,
+                    audioNote: finalAudioUrl,
                     baseScore: totals.base,
                     totalDeductions: totals.deductions,
                     total: parseFloat(totals.final.toFixed(2)),
@@ -398,7 +411,9 @@
                         setView('success');
                         setTimerRemaining(20); 
                     }
-                } catch (error) { showMessage('Error al guardar datos', 'error'); }
+                } catch (error) { 
+                    showMessage('Error al guardar datos', 'error'); 
+                }
             };
 
             const getAverageScore = (groupId) => {
@@ -751,7 +766,7 @@
                                                         <td className="p-4"><span className="bg-indigo-500/20 text-indigo-400 px-3 py-1 rounded-full text-[8px] uppercase font-black tracking-tighter">{s.category}</span></td>
                                                         <td className="p-4 text-white text-xs leading-none">{s.participantName}</td>
                                                         <td className="p-4 text-center">
-                                                            {s.audioNote ? (
+                                                            {s.audioNote && s.audioNote !== "Sin audio" ? (
                                                                 <audio src={s.audioNote} controls className="h-8 w-28 min-w-[110px] inline-block" />
                                                             ) : (
                                                                 <span className="text-slate-600 font-mono text-[9px]">-</span>
