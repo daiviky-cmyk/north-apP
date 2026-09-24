@@ -376,7 +376,7 @@
                         fetch(GOOGLE_SHEETS_URL, { 
                             method: 'POST', 
                             mode: 'no-cors', 
-                            headers: { 'Content-Type': 'application/json' },
+                            headers: { 'Content-Type': 'text/plain' },
                             body: JSON.stringify(payload) 
                         }).catch(console.error);
                     }
@@ -387,7 +387,7 @@
                         setView('success');
                         setTimerRemaining(20); 
                     }
-                } catch (error) { showMessage('Error al sincronizar', 'error'); }
+                } catch (error) { showMessage('Error al guardar datos', 'error'); }
             };
 
             const getAverageScore = (groupId) => {
