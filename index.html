@@ -421,7 +421,6 @@
 
                 const jurorId = currentUserData?.id || 'invitado';
                 const scoreId = `${selectedGroup.id}_${jurorId}`;
-                
                 const cleanScores = {};
                 CRITERIA.forEach(c => {
                     const rawVal = formScores[c.id];
@@ -429,67 +428,36 @@
                     cleanScores[c.id] = (!isNaN(parsed)) ? parseFloat(parsed.toFixed(2)) : 0.00;
                 });
 
+                // IMPORTANTE: el voto se guarda primero, sin esperar al audio.
+                // El audio se sube en segundo plano para que el jurado pueda continuar inmediatamente.
+                const initialAudioUrl = audioUrl || null;
+                const payloadFirebase = {
+                    participantId: selectedGroup.id,
+                    participantName: selectedGroup.name,
+                    category: selectedGroup.category,
+                    jurorId: jurorId,
+                    jurorName: currentUserData?.name || 'Jurado',
+                    values: cleanScores,
+                    deductions: formDeductions,
+                    audioNote: initialAudioUrl || "Sin audio",
+                    audioUrl: initialAudioUrl,
+                    baseScore: totals.base,
+                    totalDeductions: totals.deductions,
+                    total: parseFloat(totals.final.toFixed(2)),
+                    timestamp: Date.now(),
+                    hasEdited: isEdit
+                };
+
                 try {
-                    // El audio se guarda como archivo en Firebase Storage, no como Base64 en Firestore.
-                    let finalAudioUrl = audioUrl || null;
-
-                    if (audioBlob) {
-                        const extension = audioBlob.type && audioBlob.type.includes('mp4') ? 'm4a' : 'webm';
-                        const audioPath = `north-champions-audios/${selectedGroup.id}/${jurorId}-${Date.now()}.${extension}`;
-                        const audioRef = ref(storage, audioPath);
-                        const uploadTask = uploadBytesResumable(audioRef, audioBlob, {
-                            contentType: audioBlob.type || 'audio/webm'
-                        });
-
-                        finalAudioUrl = await new Promise((resolve, reject) => {
-                            uploadTask.on('state_changed',
-                                () => {},
-                                reject,
-                                async () => {
-                                    try {
-                                        resolve(await getDownloadURL(uploadTask.snapshot.ref));
-                                    } catch (err) {
-                                        reject(err);
-                                    }
-                                }
-                            );
-                        });
-                    }
-
-                    const payloadFirebase = {
-                        participantId: selectedGroup.id,
-                        participantName: selectedGroup.name,
-                        category: selectedGroup.category,
-                        jurorId: jurorId,
-                        jurorName: currentUserData?.name || 'Jurado',
-                        values: cleanScores,
-                        deductions: formDeductions,
-                        audioNote: finalAudioUrl || "Sin audio",
-                        audioUrl: finalAudioUrl || null,
-                        baseScore: totals.base,
-                        totalDeductions: totals.deductions,
-                        total: parseFloat(totals.final.toFixed(2)),
-                        timestamp: Date.now(),
-                        hasEdited: isEdit
-                    };
-
-                    const payloadSheets = {
-                        ...payloadFirebase,
-                        audioNote: finalAudioUrl || "Sin audio"
-                    };
-
+                    // 1. GUARDADO RÁPIDO DEL VOTO: no espera al audio.
                     if (user) {
-                        await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'scores', scoreId), { ...payloadFirebase, timestamp: serverTimestamp() });
-                    }
-                    if (GOOGLE_SHEETS_URL) {
-                        fetch(GOOGLE_SHEETS_URL, {
-                            method: 'POST',
-                            mode: 'no-cors',
-                            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                            body: JSON.stringify(payloadSheets)
-                        }).catch(() => {});
+                        await setDoc(
+                            doc(db, 'artifacts', appId, 'public', 'data', 'scores', scoreId),
+                            { ...payloadFirebase, timestamp: serverTimestamp() }
+                        );
                     }
 
+                    // 2. Liberamos inmediatamente la pantalla para el siguiente competidor.
                     setIsSubmitting(false);
                     if (isEdit) {
                         showMessage('¡Puntaje actualizado!');
@@ -497,6 +465,71 @@
                     } else {
                         setView('success');
                         setTimerRemaining(20);
+                    }
+
+                    // 3. AUDIO EN SEGUNDO PLANO: no bloquea el guardado ni la siguiente evaluación.
+                    if (audioBlob) {
+                        const blobToUpload = audioBlob;
+                        const extension = blobToUpload.type && blobToUpload.type.includes('mp4') ? 'm4a' : 'webm';
+                        const audioPath = `north-champions-audios/${selectedGroup.id}/${jurorId}-${Date.now()}.${extension}`;
+                        const audioRef = ref(storage, audioPath);
+                        const uploadTask = uploadBytesResumable(audioRef, blobToUpload, {
+                            contentType: blobToUpload.type || 'audio/webm'
+                        });
+
+                        uploadTask.on('state_changed',
+                            null,
+                            (error) => {
+                                console.error('Error al subir audio en segundo plano:', error);
+                                // El voto ya está guardado; un fallo del audio no bloquea la competencia.
+                            },
+                            async () => {
+                                try {
+                                    const uploadedAudioUrl = await getDownloadURL(uploadTask.snapshot.ref);
+
+                                    // Actualizamos solamente el audio cuando termina la subida.
+                                    await setDoc(
+                                        doc(db, 'artifacts', appId, 'public', 'data', 'scores', scoreId),
+                                        {
+                                            audioNote: uploadedAudioUrl,
+                                            audioUrl: uploadedAudioUrl,
+                                            audioStoragePath: audioPath
+                                        },
+                                        { merge: true }
+                                    );
+
+                                    // Recién aquí enviamos a Google Sheets la URL del audio.
+                                    if (GOOGLE_SHEETS_URL) {
+                                        const payloadSheets = {
+                                            ...payloadFirebase,
+                                            audioNote: uploadedAudioUrl,
+                                            audioUrl: uploadedAudioUrl,
+                                            audioStoragePath: audioPath
+                                        };
+                                        fetch(GOOGLE_SHEETS_URL, {
+                                            method: 'POST',
+                                            mode: 'no-cors',
+                                            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                                            body: JSON.stringify(payloadSheets)
+                                        }).catch(() => {});
+                                    }
+                                } catch (error) {
+                                    console.error('Error al finalizar guardado del audio:', error);
+                                }
+                            }
+                        );
+                    } else if (GOOGLE_SHEETS_URL) {
+                        // Sin audio, se mantiene el envío normal a Sheets.
+                        const payloadSheets = {
+                            ...payloadFirebase,
+                            audioNote: initialAudioUrl || "Sin audio"
+                        };
+                        fetch(GOOGLE_SHEETS_URL, {
+                            method: 'POST',
+                            mode: 'no-cors',
+                            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                            body: JSON.stringify(payloadSheets)
+                        }).catch(() => {});
                     }
                 } catch (error) {
                     console.error('Error al guardar datos:', error);
