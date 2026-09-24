@@ -134,6 +134,7 @@
             // Admin states
             const [searchTerm, setSearchTerm] = useState('');
             const [newParticipantName, setNewParticipantName] = useState('');
+            const [newParticipantCount, setNewParticipantCount] = useState('1');
             const [bulkList, setBulkList] = useState('');
             const [currentCategory, setCurrentCategory] = useState(CATEGORIAS[0]);
             const [expandedCategories, setExpandedCategories] = useState({});
@@ -409,8 +410,8 @@
                 doc.setFontSize(11);
                 doc.setTextColor(100, 116, 139);
                 doc.text(`Categoría: ${participant.category}`, 14, 56);
-                doc.text(`Suma Total (Todos los Jurados): ${totalSum.toFixed(2)} pts`, 14, 64);
-                doc.text(`Jurados que calificaron: ${partScores.length}`, 14, 72);
+                doc.text(`Cantidad de Integrantes: ${participant.memberCount || 1}`, 14, 64);
+                doc.text(`Suma Total (Todos los Jurados): ${totalSum.toFixed(2)} pts`, 14, 72);
 
                 let y = 85;
                 if (partScores.length === 0) {
@@ -577,7 +578,7 @@
                                                 setAudioBase64(voted?.audioNote && voted?.audioNote.startsWith("data:audio") ? voted.audioNote : null);
                                                 setView('form'); 
                                             }} className={`w-full p-5 rounded-2xl flex justify-between items-center border-2 transition-all ${voted ? 'bg-indigo-50 border-indigo-200' : 'bg-white border-slate-100 shadow-sm'}`}>
-                                                <div className="text-left font-black text-lg text-slate-800">{p.name} {voted && <div className="text-[9px] font-black text-indigo-600 uppercase mt-0.5 flex items-center gap-1"><CheckCircle2 size={12}/> Votado</div>}</div>
+                                                <div className="text-left font-black text-lg text-slate-800">{p.name} <span className="text-xs font-bold text-slate-400">({p.memberCount || 1} part.)</span> {voted && <div className="text-[9px] font-black text-indigo-600 uppercase mt-0.5 flex items-center gap-1"><CheckCircle2 size={12}/> Votado</div>}</div>
                                                 <ChevronRight className="text-slate-300" size={20} />
                                             </button>
                                         );
@@ -592,7 +593,7 @@
                                 <button onClick={() => setView('groups')} className="flex items-center gap-2 text-indigo-600 font-black text-[10px] uppercase tracking-widest"><ChevronLeft size={16}/> Atrás</button>
                                 <div className="bg-white rounded-[2.5rem] shadow-xl overflow-hidden border border-slate-200">
                                     <div className="bg-slate-950 p-6 text-white relative">
-                                        <div className="text-[9px] font-black text-indigo-400 uppercase tracking-widest mb-1">{selectedGroup.category}</div>
+                                        <div className="text-[9px] font-black text-indigo-400 uppercase tracking-widest mb-1">{selectedGroup.category} • Integrantes: {selectedGroup.memberCount || 1}</div>
                                         <h2 className="text-2xl font-black tracking-tight leading-none">{selectedGroup.name}</h2>
                                     </div>
                                     <div className="p-5 sm:p-8 space-y-8">
@@ -793,13 +794,19 @@
                                             <h4 className="text-[10px] font-black uppercase text-indigo-500 tracking-widest flex items-center gap-1.5"><Plus size={14}/> Individual</h4>
                                             <div className="space-y-2.5">
                                                 <input type="text" placeholder="Nombre" className="w-full bg-slate-50 border-2 border-slate-100 rounded-xl p-3.5 font-bold outline-none focus:border-indigo-500 transition-all text-sm" value={newParticipantName} onChange={(e) => setNewParticipantName(e.target.value)} />
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-xs font-bold text-slate-500">Integrantes:</span>
+                                                    <input type="number" min="1" value={newParticipantCount} onChange={(e) => setNewParticipantCount(e.target.value)} className="w-24 bg-slate-50 border-2 border-slate-100 rounded-xl p-2 font-bold text-center outline-none focus:border-indigo-500 text-sm" />
+                                                </div>
                                                 <select className="w-full bg-slate-50 border-2 border-slate-100 rounded-xl p-3.5 font-bold outline-none appearance-none cursor-pointer text-sm" value={currentCategory} onChange={(e) => setCurrentCategory(e.target.value)}>
                                                     {CATEGORIAS.map(c => <option key={c} value={c}>{c}</option>)}
                                                 </select>
                                                 <button onClick={async () => {
                                                     if (!newParticipantName.trim()) return;
-                                                    await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'participants'), { name: newParticipantName.trim(), category: currentCategory, createdAt: Date.now() });
+                                                    const count = parseInt(newParticipantCount) || 1;
+                                                    await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'participants'), { name: newParticipantName.trim(), memberCount: count, category: currentCategory, createdAt: Date.now() });
                                                     setNewParticipantName('');
+                                                    setNewParticipantCount('1');
                                                     showMessage('Participante registrado');
                                                 }} className="w-full bg-indigo-600 text-white py-3.5 rounded-xl font-black uppercase text-xs tracking-widest active:scale-95 transition-all shadow-lg shadow-indigo-600/10">Agregar</button>
                                             </div>
@@ -807,18 +814,28 @@
                                         <div className="space-y-3">
                                             <h4 className="text-[10px] font-black uppercase text-indigo-500 tracking-widest flex items-center gap-1.5"><ClipboardList size={14}/> Carga Masiva</h4>
                                             <div className="space-y-2.5">
-                                                <textarea placeholder="Un nombre por línea..." className="w-full bg-slate-50 border-2 border-slate-100 rounded-xl p-3.5 font-bold outline-none h-[112px] resize-none text-xs" value={bulkList} onChange={(e) => setBulkList(e.target.value)} />
+                                                <textarea placeholder="Formato por línea: Nombre - Cantidad&#10;Ejemplo: Crew Estilo Urbano - 8" className="w-full bg-slate-50 border-2 border-slate-100 rounded-xl p-3.5 font-bold outline-none h-[112px] resize-none text-xs" value={bulkList} onChange={(e) => setBulkList(e.target.value)} />
                                                 <button onClick={async () => {
                                                     if (!bulkList.trim()) return;
-                                                    const names = bulkList.split('\n').map(n => n.trim()).filter(n => n.length > 0);
+                                                    const lines = bulkList.split('\n').map(l => l.trim()).filter(l => l.length > 0);
                                                     const batch = writeBatch(db);
-                                                    names.forEach(name => {
+                                                    let countAdded = 0;
+                                                    lines.forEach(line => {
+                                                        let name = line;
+                                                        let memberCount = 1;
+                                                        if (line.includes('-')) {
+                                                            const parts = line.split('-');
+                                                            name = parts[0].trim();
+                                                            const parsedNum = parseInt(parts[1].trim());
+                                                            if (!isNaN(parsedNum)) memberCount = parsedNum;
+                                                        }
                                                         const newRef = doc(collection(db, 'artifacts', appId, 'public', 'data', 'participants'));
-                                                        batch.set(newRef, { name, category: currentCategory, createdAt: Date.now() });
+                                                        batch.set(newRef, { name, memberCount, category: currentCategory, createdAt: Date.now() });
+                                                        countAdded++;
                                                     });
                                                     await batch.commit();
                                                     setBulkList('');
-                                                    showMessage(`${names.length} sincronizados`);
+                                                    showMessage(`${countAdded} sincronizados`);
                                                 }} className="w-full bg-slate-900 text-white py-3.5 rounded-xl font-black uppercase text-xs tracking-widest active:scale-95 flex items-center justify-center gap-2">
                                                     <UploadCloud size={16}/> PROCESAR
                                                 </button>
@@ -830,7 +847,7 @@
                                         <div className="max-h-52 overflow-y-auto space-y-2 pr-1">
                                             {participants.sort((a,b) => b.createdAt - a.createdAt).map(p => (
                                                 <div key={p.id} className="flex justify-between items-center bg-slate-50 p-3.5 rounded-2xl border border-slate-100">
-                                                    <div><div className="font-bold text-slate-800 text-sm leading-none mb-1">{p.name}</div><div className="text-[9px] font-black text-indigo-500 uppercase tracking-tighter">{p.category}</div></div>
+                                                    <div><div className="font-bold text-slate-800 text-sm leading-none mb-1">{p.name} <span className="text-xs font-bold text-indigo-600">({p.memberCount || 1} part.)</span></div><div className="text-[9px] font-black text-indigo-500 uppercase tracking-tighter">{p.category}</div></div>
                                                     <div className="flex items-center gap-2">
                                                         <button onClick={() => setSelectedParticipantForPDF(p)} className="bg-indigo-50 text-indigo-600 hover:bg-indigo-100 px-3 py-2 rounded-xl text-xs font-black uppercase flex items-center gap-1 transition-colors"><FileText size={14}/> Ver PDF</button>
                                                         <button onClick={async () => await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'participants', p.id))} className="text-slate-300 hover:text-red-600 transition-colors p-2"><Trash2 size={16} /></button>
@@ -897,7 +914,7 @@
                                                                 {idx + 1}
                                                             </div>
                                                             <div className="flex-1">
-                                                                <div className="font-black text-lg text-slate-800 uppercase leading-tight mb-0.5">{p.name}</div>
+                                                                <div className="font-black text-lg text-slate-800 uppercase leading-tight mb-0.5">{p.name} <span className="text-xs font-bold text-indigo-600 font-mono">({p.memberCount || 1} part.)</span></div>
                                                                 <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{scores.filter(s => s.participantId === p.id).length} Jurados calificados</div>
                                                             </div>
                                                             <div className="flex items-center gap-2.5">
@@ -928,7 +945,7 @@
                                                                         <div className="flex items-center gap-3">
                                                                             <span className="font-mono font-black text-slate-400 text-xs">#{rIdx + 4}</span>
                                                                             <div>
-                                                                                <div className="font-bold text-slate-800 uppercase text-xs leading-none mb-1">{p.name}</div>
+                                                                                <div className="font-bold text-slate-800 uppercase text-xs leading-none mb-1">{p.name} <span className="text-[10px] text-indigo-600 font-mono">({p.memberCount || 1} part.)</span></div>
                                                                                 <div className="text-[9px] text-slate-400 uppercase tracking-wider">{scores.filter(s => s.participantId === p.id).length} jueces</div>
                                                                             </div>
                                                                         </div>
@@ -967,7 +984,8 @@
                                     <div className="border-b border-slate-100 pb-5">
                                         <div className="text-[10px] font-black text-indigo-500 uppercase tracking-widest mb-1">{selectedParticipantForPDF.category}</div>
                                         <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight uppercase">{selectedParticipantForPDF.name}</h2>
-                                        <p className="text-xs font-bold text-slate-500 mt-1">Suma Total Acumulada: <span className="text-indigo-600 font-black text-base">{getTotalScoreSum(selectedParticipantForPDF.id).toFixed(2)} pts</span></p>
+                                        <p className="text-xs font-bold text-slate-500 mt-1">Cantidad de Integrantes: <span className="text-indigo-600 font-black text-sm">{selectedParticipantForPDF.memberCount || 1}</span></p>
+                                        <p className="text-xs font-bold text-slate-500 mt-0.5">Suma Total Acumulada: <span className="text-indigo-600 font-black text-base">{getTotalScoreSum(selectedParticipantForPDF.id).toFixed(2)} pts</span></p>
                                     </div>
 
                                     <div className="space-y-6">
@@ -1047,7 +1065,7 @@
             );
         }
 
-        const root = ReactDOM.createRoot(document.getElementById('root'));
+        const root = ReactDOM.createRoot(getElementById ? document.getElementById('root') : document.getElementById('root'));
         root.render(<App />);
     </script>
 </body>
