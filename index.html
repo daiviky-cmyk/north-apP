@@ -55,6 +55,8 @@
         const ClipboardList = (props) => <Icon {...props} path={<><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4"/><path d="M12 16h4"/><path d="M8 11h.01"/><path d="M8 16h.01"/></>} />;
         const UploadCloud = (props) => <Icon {...props} path={<><path d="m16 13-4-4-4 4"/><path d="M12 9v9"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/><path d="M12 13v9"/></>} />;
         const Trash2 = (props) => <Icon {...props} path={<><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 2-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></>} />;
+        const Users = (props) => <Icon {...props} path={<><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></>} />;
+        const Search = (props) => <Icon {...props} path={<><circle cx="11" cy="11" r="8"/><line x1="21" x2="16.65" y1="21" y2="16.65"/></>} />;
         const BarChart3 = (props) => <Icon {...props} path={<><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></>} />;
         const Mic = (props) => <Icon {...props} path={<><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></>} />;
         const Square = (props) => <Icon {...props} path={<rect width="18" height="18" x="3" y="3" rx="2"/>} />;
@@ -130,6 +132,7 @@
             const [timerRemaining, setTimerRemaining] = useState(0);
             
             // Admin states
+            const [searchTerm, setSearchTerm] = useState('');
             const [newParticipantName, setNewParticipantName] = useState('');
             const [bulkList, setBulkList] = useState('');
             const [currentCategory, setCurrentCategory] = useState(CATEGORIAS[0]);
@@ -377,6 +380,12 @@
                 const sum = groupScores.reduce((acc, curr) => acc + (curr.total || 0), 0);
                 return parseFloat(sum.toFixed(2));
             };
+
+            const filteredScores = useMemo(() => {
+                if (!searchTerm) return scores;
+                const term = searchTerm.toLowerCase();
+                return scores.filter(s => s.jurorName.toLowerCase().includes(term) || s.participantName.toLowerCase().includes(term) || (s.category && s.category.toLowerCase().includes(term)));
+            }, [scores, searchTerm]);
 
             const downloadPDFFile = (participant) => {
                 const { jsPDF } = window.jspdf;
@@ -829,6 +838,34 @@
                                                 </div>
                                             ))}
                                         </div>
+                                    </div>
+                                </div>
+
+                                {/* Registro de Actividad */}
+                                <div className="bg-slate-900 rounded-[2.5rem] p-6 sm:p-8 text-white shadow-2xl overflow-hidden border border-white/5">
+                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 px-1 gap-4">
+                                        <h3 className="text-lg font-black flex items-center gap-2.5 uppercase tracking-tight leading-none"><Users size={20} className="text-indigo-400" /> Registro de Actividad</h3>
+                                        <div className="relative">
+                                            <Search size={14} className="absolute inset-y-0 left-3.5 my-auto text-slate-500" />
+                                            <input type="text" placeholder="Filtrar votos..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="bg-slate-800 border-2 border-slate-700 text-white text-xs rounded-xl py-2.5 pl-10 pr-3 w-full sm:w-64 outline-none focus:border-indigo-500 transition-all font-bold placeholder:text-slate-600" />
+                                        </div>
+                                    </div>
+                                    <div className="overflow-x-auto">
+                                        <table className="w-full text-left text-[11px]">
+                                            <thead>
+                                                <tr className="text-slate-500 border-b border-slate-800 uppercase tracking-widest font-black"><th className="p-3">Jurado</th><th className="p-3">Categoría</th><th className="p-3">Grupo</th><th className="p-3 text-right">Total</th></tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-slate-800 font-bold">
+                                                {filteredScores.sort((a,b) => (b.timestamp || 0) - (a.timestamp || 0)).map(s => (
+                                                    <tr key={s.id} className="hover:bg-slate-800/50 transition-colors">
+                                                        <td className="p-3 text-slate-400 uppercase tracking-tighter">{s.jurorName}</td>
+                                                        <td className="p-3"><span className="bg-indigo-500/20 text-indigo-400 px-2.5 py-0.5 rounded-full text-[8px] uppercase font-black tracking-tighter">{s.category}</span></td>
+                                                        <td className="p-3 text-white text-xs leading-none">{s.participantName}</td>
+                                                        <td className="p-3 text-right font-black text-indigo-400 text-sm tabular-nums">{s.total?.toFixed(2)}</td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
                                     </div>
                                 </div>
 
