@@ -34,6 +34,7 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getFirestore, collection, doc, setDoc, onSnapshot, serverTimestamp, addDoc, deleteDoc, writeBatch, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getStorage, ref, uploadBytesResumable, getDownloadURL } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
 
         // --- ICONOS SVG ---
         const Icon = ({ path, size = 24, className = "" }) => (
@@ -75,6 +76,7 @@
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
+        const storage = getStorage(app);
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'north-champions-2026';
         const GOOGLE_SHEETS_URL = "https://script.google.com/macros/s/AKfycbxDtQ_e9r_hyGHvT3v5T501qY48RzxSF-BH9RMsq2nu6HX0lMIso_0Eh1wFAgAecfn5/exec";
 
@@ -146,7 +148,8 @@
             // Audio recorder states
             const [isRecording, setIsRecording] = useState(false);
             const [recordingTime, setRecordingTime] = useState(0);
-            const [audioBase64, setAudioBase64] = useState(null);
+            const [audioUrl, setAudioUrl] = useState(null);
+            const [audioBlob, setAudioBlob] = useState(null);
             const [audioPreviewUrl, setAudioPreviewUrl] = useState(null);
             const [mediaRecorder, setMediaRecorder] = useState(null);
             const [isSubmitting, setIsSubmitting] = useState(false);
@@ -196,7 +199,7 @@
                     }
 
                     const recorder = mimeType
-                        ? new MediaRecorder(stream, { mimeType })
+                        ? new MediaRecorder(stream, { mimeType, audioBitsPerSecond: 64000 })
                         : new MediaRecorder(stream);
 
                     const chunks = [];
@@ -221,12 +224,10 @@
                         const previewUrl = URL.createObjectURL(blob);
                         setAudioPreviewUrl(previewUrl);
 
-                        // Base64: se conserva para el envío a Google Drive.
-                        const reader = new FileReader();
-                        reader.onloadend = () => {
-                            setAudioBase64(reader.result);
-                        };
-                        reader.readAsDataURL(blob);
+                        // Conservamos el Blob original. Se subirá directamente a Firebase Storage
+                        // al guardar el voto, evitando Base64 y el límite de tamaño de Firestore.
+                        setAudioBlob(blob);
+                        setAudioUrl(null);
 
                         stream.getTracks().forEach(track => track.stop());
                     };
@@ -255,7 +256,8 @@
                 }
 
                 setAudioPreviewUrl(null);
-                setAudioBase64(null);
+                setAudioUrl(null);
+                setAudioBlob(null);
                 setRecordingTime(0);
             };
 
@@ -353,7 +355,8 @@
                     setSelectedParticipantForPDF(null);
                     setFormScores({});
                     setFormDeductions({});
-                    setAudioBase64(null);
+                    setAudioUrl(null);
+                setAudioBlob(null);
                     setCleanupCode('');
                     setShowCleanupModal(false);
                     showMessage(`Limpieza completada: ${docsToDelete.length} registros eliminados`);
@@ -426,37 +429,64 @@
                     cleanScores[c.id] = (!isNaN(parsed)) ? parseFloat(parsed.toFixed(2)) : 0.00;
                 });
 
-                const payloadFirebase = {
-                    participantId: selectedGroup.id,
-                    participantName: selectedGroup.name,
-                    category: selectedGroup.category,
-                    jurorId: jurorId,
-                    jurorName: currentUserData?.name || 'Jurado',
-                    values: cleanScores,
-                    deductions: formDeductions,
-                    audioNote: audioBase64 || "Sin audio",
-                    baseScore: totals.base,
-                    totalDeductions: totals.deductions,
-                    total: parseFloat(totals.final.toFixed(2)),
-                    timestamp: Date.now(),
-                    hasEdited: isEdit 
-                };
-
-                const payloadSheets = {
-    ...payloadFirebase,
-    audioNote: audioBase64 || "Sin audio"
-};
-
                 try {
+                    // El audio se guarda como archivo en Firebase Storage, no como Base64 en Firestore.
+                    let finalAudioUrl = audioUrl || null;
+
+                    if (audioBlob) {
+                        const extension = audioBlob.type && audioBlob.type.includes('mp4') ? 'm4a' : 'webm';
+                        const audioPath = `north-champions-audios/${selectedGroup.id}/${jurorId}-${Date.now()}.${extension}`;
+                        const audioRef = ref(storage, audioPath);
+                        const uploadTask = uploadBytesResumable(audioRef, audioBlob, {
+                            contentType: audioBlob.type || 'audio/webm'
+                        });
+
+                        finalAudioUrl = await new Promise((resolve, reject) => {
+                            uploadTask.on('state_changed',
+                                () => {},
+                                reject,
+                                async () => {
+                                    try {
+                                        resolve(await getDownloadURL(uploadTask.snapshot.ref));
+                                    } catch (err) {
+                                        reject(err);
+                                    }
+                                }
+                            );
+                        });
+                    }
+
+                    const payloadFirebase = {
+                        participantId: selectedGroup.id,
+                        participantName: selectedGroup.name,
+                        category: selectedGroup.category,
+                        jurorId: jurorId,
+                        jurorName: currentUserData?.name || 'Jurado',
+                        values: cleanScores,
+                        deductions: formDeductions,
+                        audioNote: finalAudioUrl || "Sin audio",
+                        audioUrl: finalAudioUrl || null,
+                        baseScore: totals.base,
+                        totalDeductions: totals.deductions,
+                        total: parseFloat(totals.final.toFixed(2)),
+                        timestamp: Date.now(),
+                        hasEdited: isEdit
+                    };
+
+                    const payloadSheets = {
+                        ...payloadFirebase,
+                        audioNote: finalAudioUrl || "Sin audio"
+                    };
+
                     if (user) {
                         await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'scores', scoreId), { ...payloadFirebase, timestamp: serverTimestamp() });
                     }
                     if (GOOGLE_SHEETS_URL) {
-                        fetch(GOOGLE_SHEETS_URL, { 
-                            method: 'POST', 
-                            mode: 'no-cors', 
+                        fetch(GOOGLE_SHEETS_URL, {
+                            method: 'POST',
+                            mode: 'no-cors',
                             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                            body: JSON.stringify(payloadSheets) 
+                            body: JSON.stringify(payloadSheets)
                         }).catch(() => {});
                     }
 
@@ -466,11 +496,12 @@
                         setView('categories');
                     } else {
                         setView('success');
-                        setTimerRemaining(20); 
+                        setTimerRemaining(20);
                     }
-                } catch (error) { 
+                } catch (error) {
+                    console.error('Error al guardar datos:', error);
                     setIsSubmitting(false);
-                    showMessage('Error al guardar datos', 'error'); 
+                    showMessage('Error al guardar datos', 'error');
                 }
             };
 
@@ -682,7 +713,10 @@
                                                     URL.revokeObjectURL(audioPreviewUrl);
                                                 }
                                                 setAudioPreviewUrl(null);
-                                                setAudioBase64(voted?.audioNote && voted?.audioNote.startsWith("data:audio") ? voted.audioNote : null);
+                                                const savedAudio = voted?.audioUrl || (voted?.audioNote && /^https?:\/\//.test(voted.audioNote) ? voted.audioNote : null);
+                                                setAudioUrl(savedAudio);
+                                                setAudioBlob(null);
+                                                if (savedAudio) setAudioPreviewUrl(savedAudio);
                                                 setView('form'); 
                                             }} className={`w-full p-5 rounded-2xl flex justify-between items-center border-2 transition-all ${voted ? 'bg-indigo-50 border-indigo-200' : 'bg-white border-slate-100 shadow-sm'}`}>
                                                 <div className="text-left font-black text-lg text-slate-800">{p.name} <span className="text-xs font-bold text-slate-400">({p.memberCount || 1} part.)</span> {voted && <div className="text-[9px] font-black text-indigo-600 uppercase mt-0.5 flex items-center gap-1"><CheckCircle2 size={12}/> Votado</div>}</div>
