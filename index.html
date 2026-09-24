@@ -129,7 +129,6 @@
             const [newParticipantName, setNewParticipantName] = useState('');
             const [bulkList, setBulkList] = useState('');
             const [currentCategory, setCurrentCategory] = useState(CATEGORIAS[0]);
-            const [isSubmitting, setIsSubmitting] = useState(false);
 
             // Audio Recorder
             const [isRecording, setIsRecording] = useState(false);
@@ -341,9 +340,7 @@
             };
 
             const saveScore = async (isEdit = false) => {
-                if (!selectedGroup || isSubmitting) return;
-                setIsSubmitting(true);
-
+                if (!selectedGroup) return;
                 const jurorId = currentUserData?.id || 'invitado';
                 const scoreId = `${selectedGroup.id}_${jurorId}`;
                 
@@ -354,31 +351,6 @@
                     cleanScores[c.id] = (!isNaN(parsed)) ? parseFloat(parsed.toFixed(2)) : 0.00;
                 });
 
-                let driveAudioUrl = null;
-
-                // Subir audio a Google Drive si existe
-                if (audioBase64) {
-                    try {
-                        const audioRes = await fetch(GOOGLE_SHEETS_URL, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'text/plain' },
-                            body: JSON.stringify({
-                                action: 'uploadAudio',
-                                category: selectedGroup.category,
-                                jurorName: currentUserData?.name || 'Jurado',
-                                participantName: selectedGroup.name,
-                                audioBase64: audioBase64
-                            })
-                        });
-                        const audioData = await audioRes.json();
-                        if (audioData && audioData.fileUrl) {
-                            driveAudioUrl = audioData.fileUrl;
-                        }
-                    } catch (e) {
-                        console.error("Error al subir audio", e);
-                    }
-                }
-
                 const payload = {
                     participantId: selectedGroup.id,
                     participantName: selectedGroup.name,
@@ -387,8 +359,7 @@
                     jurorName: currentUserData?.name || 'Jurado',
                     values: cleanScores,
                     deductions: formDeductions,
-                    audioNote: driveAudioUrl || audioBase64 || null,
-                    audioDriveLink: driveAudioUrl || "No grabado",
+                    audioNote: audioBase64 || null,
                     baseScore: totals.base,
                     totalDeductions: totals.deductions,
                     penalizacionMonto: totals.deductions.toFixed(2),
@@ -405,7 +376,7 @@
                         fetch(GOOGLE_SHEETS_URL, { 
                             method: 'POST', 
                             mode: 'no-cors', 
-                            headers: { 'Content-Type': 'text/plain' },
+                            headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify(payload) 
                         }).catch(console.error);
                     }
@@ -417,7 +388,6 @@
                         setTimerRemaining(20); 
                     }
                 } catch (error) { showMessage('Error al sincronizar', 'error'); }
-                finally { setIsSubmitting(false); }
             };
 
             const getAverageScore = (groupId) => {
@@ -689,7 +659,7 @@
                                                     <span className="text-6xl font-black text-indigo-600 tabular-nums leading-none tracking-tighter">{totals.final.toFixed(2)}</span>
                                                 </div>
                                             </div>
-                                            <button disabled={isFormIncomplete || isSubmitting} onClick={() => saveScore(scores.some(s => s.participantId === selectedGroup.id && s.jurorId === currentUserData?.id))} className={`w-full py-6 rounded-[2rem] font-black text-xl shadow-xl transition-all uppercase tracking-widest ${isFormIncomplete || isSubmitting ? 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none' : 'bg-indigo-600 text-white active:scale-95'}`}>{isSubmitting ? 'GUARDANDO...' : 'ENVIAR VOTO'}</button>
+                                            <button disabled={isFormIncomplete} onClick={() => saveScore(scores.some(s => s.participantId === selectedGroup.id && s.jurorId === currentUserData?.id))} className={`w-full py-6 rounded-[2rem] font-black text-xl shadow-xl transition-all uppercase tracking-widest ${isFormIncomplete ? 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none' : 'bg-indigo-600 text-white active:scale-95'}`}>ENVIAR VOTO</button>
                                         </div>
                                     </div>
                                 </div>
