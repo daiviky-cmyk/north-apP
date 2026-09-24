@@ -340,9 +340,9 @@
                 };
 
                 const payloadSheets = {
-                    ...payloadFirebase,
-                    audioNote: audioBase64 ? "Audio Registrado" : "Sin audio"
-                };
+    ...payloadFirebase,
+    audioNote: audioBase64 || "Sin audio"
+};
 
                 try {
                     if (user) {
