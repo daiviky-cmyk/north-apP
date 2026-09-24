@@ -32,7 +32,7 @@
 
         // --- FIREBASE IMPORTS ---
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getFirestore, collection, doc, setDoc, onSnapshot, serverTimestamp, addDoc, deleteDoc, writeBatch } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, collection, doc, setDoc, onSnapshot, serverTimestamp, addDoc, deleteDoc, writeBatch, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
         // --- ICONOS SVG ---
@@ -139,6 +139,9 @@
             const [currentCategory, setCurrentCategory] = useState(CATEGORIAS[0]);
             const [expandedCategories, setExpandedCategories] = useState({});
             const [selectedParticipantForPDF, setSelectedParticipantForPDF] = useState(null);
+            const [showCleanupModal, setShowCleanupModal] = useState(false);
+            const [cleanupCode, setCleanupCode] = useState('');
+            const [isCleaning, setIsCleaning] = useState(false);
 
             // Audio recorder states
             const [isRecording, setIsRecording] = useState(false);
@@ -308,6 +311,58 @@
             const showMessage = (text, type = 'success') => {
                 setMessage({ text, type });
                 setTimeout(() => setMessage(null), 3000);
+            };
+
+            // Limpieza total protegida por un código independiente del acceso Master.
+            // Borra participantes y calificaciones de Firestore.
+            const MASTER_CLEANUP_CODE = 'LIMPIAR-2026';
+
+            const cleanEntireApp = async () => {
+                if (cleanupCode !== MASTER_CLEANUP_CODE) {
+                    showMessage('Código de limpieza incorrecto', 'error');
+                    return;
+                }
+
+                if (!user || currentUserData?.id !== 'admin' || isCleaning) return;
+
+                setIsCleaning(true);
+                try {
+                    const participantsRef = collection(db, 'artifacts', appId, 'public', 'data', 'participants');
+                    const scoresRef = collection(db, 'artifacts', appId, 'public', 'data', 'scores');
+                    const [participantsSnap, scoresSnap] = await Promise.all([
+                        getDocs(participantsRef),
+                        getDocs(scoresRef)
+                    ]);
+
+                    const docsToDelete = [
+                        ...participantsSnap.docs,
+                        ...scoresSnap.docs
+                    ];
+
+                    // Firestore limita los batches a 500 operaciones; usamos grupos de 450.
+                    for (let i = 0; i < docsToDelete.length; i += 450) {
+                        const batch = writeBatch(db);
+                        docsToDelete.slice(i, i + 450).forEach(item => batch.delete(item.ref));
+                        await batch.commit();
+                    }
+
+                    setParticipants([]);
+                    setScores([]);
+                    setSelectedGroup(null);
+                    setSelectedCategory(null);
+                    setSelectedParticipantForPDF(null);
+                    setFormScores({});
+                    setFormDeductions({});
+                    setAudioBase64(null);
+                    setCleanupCode('');
+                    setShowCleanupModal(false);
+                    showMessage(`Limpieza completada: ${docsToDelete.length} registros eliminados`);
+                } catch (err) {
+                    console.error('Error durante la limpieza total:', err);
+                    showMessage('No se pudo completar la limpieza', 'error');
+                } finally {
+                    setIsCleaning(false);
+                }
             };
 
             const toggleDeduction = (deductionId) => {
@@ -1019,6 +1074,79 @@
                                             </div>
                                         );
                                     })}
+                                </div>
+                            </div>
+                        )}
+
+                        {view === 'admin' && !selectedParticipantForPDF && (
+                            <div className="bg-red-50 border-2 border-red-200 rounded-[2.5rem] p-6 sm:p-8 shadow-sm">
+                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-5">
+                                    <div className="flex items-start gap-4">
+                                        <div className="bg-red-100 text-red-600 p-3 rounded-2xl shrink-0"><Trash2 size={24}/></div>
+                                        <div>
+                                            <h3 className="text-base font-black text-red-700 uppercase tracking-tight">Limpieza total de la aplicación</h3>
+                                            <p className="text-xs font-bold text-red-500/80 mt-1 leading-relaxed">Elimina todos los competidores y todas las calificaciones guardadas en Firebase. Esta acción no se puede deshacer.</p>
+                                        </div>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => { setCleanupCode(''); setShowCleanupModal(true); }}
+                                        className="bg-red-600 hover:bg-red-700 text-white px-5 py-3.5 rounded-xl font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 shadow-lg shadow-red-600/20 active:scale-95 transition-all shrink-0"
+                                    >
+                                        <Trash2 size={16}/> BORRAR TODO
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
+                        {showCleanupModal && view === 'admin' && (
+                            <div className="fixed inset-0 z-[200] bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+                                <div className="bg-white w-full max-w-md rounded-[2rem] shadow-2xl border border-red-200 overflow-hidden animate-in">
+                                    <div className="bg-red-600 text-white p-6">
+                                        <div className="flex items-center gap-3">
+                                            <div className="bg-white/15 p-2.5 rounded-xl"><Trash2 size={22}/></div>
+                                            <div>
+                                                <h3 className="font-black uppercase tracking-tight text-lg">Confirmar limpieza total</h3>
+                                                <p className="text-[10px] font-bold uppercase tracking-widest text-red-100 mt-1">Acción irreversible</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="p-6 space-y-5">
+                                        <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-xs font-bold text-red-700 leading-relaxed">
+                                            Se eliminarán <strong>todos los competidores y todas las calificaciones</strong> de la aplicación. No se borrará la configuración del sistema.
+                                        </div>
+                                        <div>
+                                            <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2">Ingrese el código de seguridad</label>
+                                            <input
+                                                type="password"
+                                                autoFocus
+                                                value={cleanupCode}
+                                                onChange={(e) => setCleanupCode(e.target.value)}
+                                                onKeyDown={(e) => { if (e.key === 'Enter') cleanEntireApp(); }}
+                                                placeholder="Código de limpieza"
+                                                className="w-full bg-slate-50 border-2 border-slate-200 focus:border-red-500 rounded-xl p-4 font-black tracking-widest outline-none text-center"
+                                            />
+                                            <p className="text-[9px] text-slate-400 font-bold mt-2 text-center">Se requiere el código exacto para continuar.</p>
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-3">
+                                            <button
+                                                type="button"
+                                                disabled={isCleaning}
+                                                onClick={() => { setShowCleanupModal(false); setCleanupCode(''); }}
+                                                className="bg-slate-100 hover:bg-slate-200 text-slate-700 py-3.5 rounded-xl font-black text-xs uppercase tracking-widest transition-all"
+                                            >
+                                                CANCELAR
+                                            </button>
+                                            <button
+                                                type="button"
+                                                disabled={isCleaning || cleanupCode !== MASTER_CLEANUP_CODE}
+                                                onClick={cleanEntireApp}
+                                                className="bg-red-600 hover:bg-red-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white py-3.5 rounded-xl font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 transition-all"
+                                            >
+                                                <Trash2 size={15}/> {isCleaning ? 'BORRANDO...' : 'CONFIRMAR'}
+                                            </button>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         )}
