@@ -48,15 +48,11 @@
         const ChevronRight = (props) => <Icon {...props} path={<polyline points="9 18 15 12 9 6"/>} />;
         const ChevronLeft = (props) => <Icon {...props} path={<polyline points="15 18 9 12 15 6"/>} />;
         const ChevronDown = (props) => <Icon {...props} path={<polyline points="6 9 12 15 18 9"/>} />;
-        const CheckCircle2 = (props) => <Icon {...props} path={<><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/><path d="m9 12 2 2 4-4"/></>} />;
-        const MinusCircle = (props) => <Icon {...props} path={<><circle cx="12" cy="12" r="10"/><line x1="8" x2="16" y1="12" y2="12"/></>} />;
         const UserPlus = (props) => <Icon {...props} path={<><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" x2="19" y1="8" y2="14"/><line x1="16" x2="22" y1="11" y2="11"/></>} />;
         const Plus = (props) => <Icon {...props} path={<><line x1="12" x2="12" y1="5" y2="19"/><line x1="5" x2="19" y1="12" y2="12"/></>} />;
         const ClipboardList = (props) => <Icon {...props} path={<><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4"/><path d="M12 16h4"/><path d="M8 11h.01"/><path d="M8 16h.01"/></>} />;
         const UploadCloud = (props) => <Icon {...props} path={<><path d="m16 13-4-4-4 4"/><path d="M12 9v9"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/><path d="M12 13v9"/></>} />;
         const Trash2 = (props) => <Icon {...props} path={<><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 2-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></>} />;
-        const Users = (props) => <Icon {...props} path={<><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></>} />;
-        const Search = (props) => <Icon {...props} path={<><circle cx="11" cy="11" r="8"/><line x1="21" x2="16.65" y1="21" y2="16.65"/></>} />;
         const BarChart3 = (props) => <Icon {...props} path={<><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></>} />;
         const FileText = (props) => <Icon {...props} path={<><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/><polyline points="10 9 9 9 8 9"/></>} />;
 
@@ -73,7 +69,6 @@
         const auth = getAuth(app);
         const db = getFirestore(app);
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'north-champions-2026';
-        const GOOGLE_SHEETS_URL = "https://script.google.com/macros/s/AKfycbxbXEeV2VXXW8P6RD9riqkKtaMr2FedlRnWxn21rbd_ZuL88Wbec-elQyOcmOVAOEws/exec";
 
         const LOGO_URL = "./logo.png";
 
@@ -121,17 +116,10 @@
             const [view, setView] = useState('login'); 
             const [scores, setScores] = useState([]);
             const [participants, setParticipants] = useState([]);
-            const [selectedCategory, setSelectedCategory] = useState(null);
-            const [selectedGroup, setSelectedGroup] = useState(null);
-            const [formScores, setFormScores] = useState({}); 
-            const [formDeductions, setFormDeductions] = useState({}); 
-            const [message, setMessage] = useState(null);
-            const [timerRemaining, setTimerRemaining] = useState(0);
-            const [searchTerm, setSearchTerm] = useState('');
             const [newParticipantName, setNewParticipantName] = useState('');
             const [bulkList, setBulkList] = useState('');
             const [currentCategory, setCurrentCategory] = useState(CATEGORIAS[0]);
-            const [isSubmitting, setIsSubmitting] = useState(false);
+            const [message, setMessage] = useState(null);
             const [expandedCategories, setExpandedCategories] = useState({});
 
             useEffect(() => {
@@ -178,19 +166,20 @@
                 setExpandedCategories(prev => ({ ...prev, [cat]: !prev[cat] }));
             };
 
-            const getAverageScore = (groupId) => {
+            // Suma total de los puntajes de todos los jurados para un participante
+            const getTotalScoreSum = (groupId) => {
                 const groupScores = scores.filter(s => s.participantId === groupId);
                 if (groupScores.length === 0) return 0;
-                const sum = groupScores.reduce((acc, curr) => acc + curr.total, 0);
-                return parseFloat((sum / groupScores.length).toFixed(2));
+                const sum = groupScores.reduce((acc, curr) => acc + (curr.total || 0), 0);
+                return parseFloat(sum.toFixed(2));
             };
 
-            // Función para exportar PDF individual del participante
+            // Función para exportar PDF con nombres completos de ítems y lista de penalizaciones aplicadas
             const exportParticipantPDF = (participant) => {
                 const { jsPDF } = window.jspdf;
                 const doc = new jsPDF();
                 const partScores = scores.filter(s => s.participantId === participant.id);
-                const avg = getAverageScore(participant.id);
+                const totalSum = getTotalScoreSum(participant.id);
 
                 // Encabezado
                 doc.setFillColor(15, 23, 42); // Slate-950
@@ -210,8 +199,8 @@
                 doc.setFontSize(11);
                 doc.setTextColor(100, 116, 139);
                 doc.text(`Categoría: ${participant.category}`, 14, 56);
-                doc.text(`Promedio General: ${avg.toFixed(2)} pts`, 14, 64);
-                doc.text(`Jueces que calificaron: ${partScores.length}`, 14, 72);
+                doc.text(`Suma Total (Todos los Jurados): ${totalSum.toFixed(2)} pts`, 14, 64);
+                doc.text(`Jurados que calificaron: ${partScores.length}`, 14, 72);
 
                 let y = 85;
                 if (partScores.length === 0) {
@@ -219,31 +208,59 @@
                     doc.setTextColor(150, 150, 150);
                     doc.text("Este participante aún no tiene calificaciones registradas.", 14, y);
                 } else {
-                    partScores.forEach((scoreObj, index) => {
-                        if (y > 250) { doc.addPage(); y = 20; }
+                    partScores.forEach((scoreObj) => {
+                        if (y > 240) { doc.addPage(); y = 20; }
                         doc.setFillColor(241, 245, 249);
                         doc.roundedRect(14, y, 182, 12, 2, 2, 'F');
                         doc.setFont("Helvetica", "bold");
                         doc.setFontSize(10);
                         doc.setTextColor(15, 23, 42);
-                        doc.text(`${scoreObj.jurorName.toUpperCase()} — Total Jurado: ${scoreObj.total.toFixed(2)}`, 18, y + 8);
-                        y += 18;
+                        doc.text(`${scoreObj.jurorName.toUpperCase()} — Subtotal Jurado: ${scoreObj.total.toFixed(2)}`, 18, y + 8);
+                        y += 16;
+
+                        // Ítems de Calificación (Nombres completos sin abreviar)
+                        doc.setFont("Helvetica", "bold");
+                        doc.setFontSize(9);
+                        doc.setTextColor(71, 85, 105);
+                        doc.text("Desglose de Criterios:", 18, y);
+                        y += 6;
 
                         doc.setFont("Helvetica", "normal");
-                        doc.setFontSize(9);
-                        
-                        // Criterios
                         if (scoreObj.values) {
                             Object.keys(scoreObj.values).forEach(critKey => {
                                 const critMeta = CRITERIA.find(c => c.id === critKey);
-                                const label = critMeta ? critMeta.label : critKey;
+                                const fullLabel = critMeta ? critMeta.label : critKey;
                                 const val = scoreObj.values[critKey];
-                                if (y > 270) { doc.addPage(); y = 20; }
-                                doc.text(`• ${label}: ${parseFloat(val || 0).toFixed(2)}`, 20, y);
+                                if (y > 275) { doc.addPage(); y = 20; }
+                                doc.text(`• ${fullLabel}: ${parseFloat(val || 0).toFixed(2)} pts`, 22, y);
                                 y += 6;
                             });
                         }
+
+                        // Penalizaciones aplicadas por este jurado
+                        y += 2;
+                        if (y > 265) { doc.addPage(); y = 20; }
+                        doc.setFont("Helvetica", "bold");
+                        doc.text("Penalizaciones Aplicadas:", 18, y);
                         y += 6;
+
+                        doc.setFont("Helvetica", "normal");
+                        const activeDeductions = scoreObj.deductions ? Object.keys(scoreObj.deductions).filter(k => scoreObj.deductions[k]) : [];
+                        
+                        if (activeDeductions.length === 0) {
+                            doc.text("• Ninguna penalización registrada.", 22, y);
+                            y += 6;
+                        } else {
+                            activeDeductions.forEach(dedId => {
+                                const dedMeta = DEDUCTIONS_LIST.find(d => d.id === dedId);
+                                const dedLabel = dedMeta ? dedMeta.label : dedId;
+                                const dedVal = dedMeta ? dedMeta.value : 0;
+                                if (y > 275) { doc.addPage(); y = 20; }
+                                doc.text(`• ${dedLabel} (-${dedVal.toFixed(2)} pts)`, 22, y);
+                                y += 6;
+                            });
+                        }
+                        y += 10;
                     });
                 }
 
@@ -269,7 +286,7 @@
                                 <span className="text-[9px] font-black uppercase text-slate-500 leading-none mb-1">{currentUserData?.name}</span>
                                 <span className="text-[8px] font-black text-green-500 flex items-center gap-1 uppercase tracking-tighter"><Cloud size={10}/> Sistema Online</span>
                             </div>
-                            <button onClick={() => setView('login')} className="bg-slate-800 p-2.5 rounded-xl text-slate-400 hover:text-red-400 transition-colors"><LogOut size={20} /></button>
+                            <button onClick={() => setView('login')} className="bg-slate-800 p-2.5 rounded-xl text-slate-400 hover:text-red-400 transition-colors">Salir</button>
                         </div>
                     </header>
 
@@ -283,8 +300,8 @@
                                 <div className="w-full max-w-md bg-slate-900 rounded-[3rem] p-12 text-white shadow-2xl border border-slate-800 text-center animate-in">
                                     <div className="bg-indigo-600 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-8 shadow-lg rotate-3"><Trophy size={32} /></div>
                                     <h1 className="text-2xl font-black uppercase tracking-tighter mb-1">North Champions</h1>
-                                    <p className="text-indigo-400 font-bold text-[10px] uppercase tracking-widest mb-12">Acceso de Personal</p>
-                                    <input type="password" placeholder="Contraseña" className="w-full bg-slate-800 border-2 border-slate-700 rounded-2xl p-5 mb-6 text-center text-2xl font-black outline-none focus:border-indigo-500 transition-all placeholder:text-slate-700" value={password} onChange={(e) => setPassword(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && handleLogin()} />
+                                    <p className="text-indigo-400 font-bold text-[10px] uppercase tracking-widest mb-12">Panel de Administración</p>
+                                    <input type="password" placeholder="Contraseña de Administrador" className="w-full bg-slate-800 border-2 border-slate-700 rounded-2xl p-5 mb-6 text-center text-2xl font-black outline-none focus:border-indigo-500 transition-all placeholder:text-slate-700" value={password} onChange={(e) => setPassword(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && handleLogin()} />
                                     <button onClick={handleLogin} className="w-full bg-indigo-600 hover:bg-indigo-500 py-5 rounded-2xl font-black text-lg active:scale-95 transition-all shadow-xl shadow-indigo-600/20 uppercase tracking-widest">INGRESAR</button>
                                 </div>
                             </div>
@@ -352,17 +369,17 @@
                                     </div>
                                 </div>
 
-                                {/* Podio General & Ranking Completo Desplegable */}
+                                {/* Podio General & Ranking Completo por Suma Total */}
                                 <div className="space-y-8 pb-10">
                                     <h2 className="text-4xl font-black tracking-tighter flex items-center gap-4 border-b border-slate-200 pb-8 px-2 uppercase leading-none">
-                                        <BarChart3 className="text-indigo-600" size={40} /> Podio y Ranking Completo
+                                        <BarChart3 className="text-indigo-600" size={40} /> Podio y Ranking (Suma Total)
                                     </h2>
                                     {CATEGORIAS.map(cat => {
                                         const catParticipants = participants.filter(p => p.category === cat);
                                         if (catParticipants.length === 0) return null;
                                         
-                                        // Ordenados de mayor a menor promedio
-                                        const rankedAll = catParticipants.map(p => ({ ...p, avg: getAverageScore(p.id) })).sort((a, b) => b.avg - a.avg);
+                                        // Ordenados de mayor a menor según la SUMA TOTAL de los 3 jurados
+                                        const rankedAll = catParticipants.map(p => ({ ...p, totalSum: getTotalScoreSum(p.id) })).sort((a, b) => b.totalSum - a.totalSum);
                                         const top3 = rankedAll.slice(0, 3);
                                         const rest = rankedAll.slice(3);
                                         const isExpanded = expandedCategories[cat];
@@ -386,8 +403,8 @@
                                                             </div>
                                                             <div className="flex items-center gap-3">
                                                                 <div className="text-right bg-white px-5 py-2.5 rounded-2xl border border-slate-200">
-                                                                    <div className="text-2xl font-black text-indigo-600 leading-none mb-1 tabular-nums">{p.avg.toFixed(2)}</div>
-                                                                    <div className="text-[8px] font-black text-slate-400 uppercase tracking-widest leading-none">Promedio</div>
+                                                                    <div className="text-2xl font-black text-indigo-600 leading-none mb-1 tabular-nums">{p.totalSum.toFixed(2)}</div>
+                                                                    <div className="text-[8px] font-black text-slate-400 uppercase tracking-widest leading-none">Suma Total</div>
                                                                 </div>
                                                                 <button onClick={() => exportParticipantPDF(p)} className="bg-indigo-50 text-indigo-600 hover:bg-indigo-100 p-3 rounded-2xl font-black transition-colors" title="Exportar PDF"><FileText size={18}/></button>
                                                             </div>
@@ -418,7 +435,7 @@
                                                                             </div>
                                                                         </div>
                                                                         <div className="flex items-center gap-3">
-                                                                            <span className="font-black text-indigo-600 text-lg tabular-nums">{p.avg.toFixed(2)}</span>
+                                                                            <span className="font-black text-indigo-600 text-lg tabular-nums">{p.totalSum.toFixed(2)}</span>
                                                                             <button onClick={() => exportParticipantPDF(p)} className="bg-white text-indigo-600 hover:bg-indigo-50 p-2.5 rounded-xl border border-slate-200 transition-colors" title="Exportar PDF"><FileText size={16}/></button>
                                                                         </div>
                                                                     </div>
