@@ -80,15 +80,15 @@
 
         const CRITERIA = [
             { id: 'creatividad', label: '1. Creatividad', max: 2, section: 'Desempeño' },
-            { id: 'escenario', label: '2. Escenario, Espacio y Transiciones', max: 2, section: 'Desempeño' },
-            { id: 'intensidad', label: '3. Intensidad, Proyección y Presencia', max: 2, section: 'Desempeño' },
+            { id: 'escenario', label: '2. Escenario Espacio y Transiciones', max: 2, section: 'Desempeño' },
+            { id: 'intensidad', label: '3. Intensidad Proyección y Presencia', max: 2, section: 'Desempeño' },
             { id: 'imagen', label: '4. Imagen Urbana', max: 2, section: 'Desempeño' },
-            { id: 'entretenimiento', label: '5. Entretenimiento / Atracción', max: 2, section: 'Desempeño' },
-            { id: 'musicalidad', label: 'I. Musicalidad', max: 2, section: 'Habilidades' },
-            { id: 'sincronizacion', label: 'II. Sincronización', max: 2, section: 'Habilidades' },
-            { id: 'ejecucion', label: 'III. Ejecución', max: 2, section: 'Habilidades' },
-            { id: 'dificultad', label: 'IV. Dificultad Estilos Urbanos', max: 2, section: 'Habilidades' },
-            { id: 'variedad', label: 'V. Variedad de Estilo', max: 2, section: 'Habilidades' },
+            { id: 'entretenimiento', label: '5. Entretenimiento Atracción', max: 2, section: 'Desempeño' },
+            { id: 'musicalidad', label: '6. Musicalidad', max: 2, section: 'Habilidades' },
+            { id: 'sincronizacion', label: '7. Sincronización', max: 2, section: 'Habilidades' },
+            { id: 'ejecucion', label: '8. Ejecución', max: 2, section: 'Habilidades' },
+            { id: 'dificultad', label: '9. Dificultad Estilos Urbanos', max: 2, section: 'Habilidades' },
+            { id: 'variedad', label: '10. Variedad de Estilo', max: 2, section: 'Habilidades' },
         ];
 
         const DEDUCTIONS_LIST = [
@@ -410,7 +410,7 @@
                     doc.text("Este participante aún no tiene calificaciones registradas.", 14, y);
                 } else {
                     partScores.forEach((scoreObj) => {
-                        if (y > 240) { doc.addPage(); y = 20; }
+                        if (y > 230) { doc.addPage(); y = 20; }
                         doc.setFillColor(241, 245, 249);
                         doc.roundedRect(14, y, 182, 12, 2, 2, 'F');
                         doc.setFont("Helvetica", "bold");
@@ -419,31 +419,55 @@
                         doc.text(`${scoreObj.jurorName.toUpperCase()} — Subtotal Jurado: ${scoreObj.total.toFixed(2)}`, 18, y + 8);
                         y += 16;
 
+                        // Desempeño
                         doc.setFont("Helvetica", "bold");
                         doc.setFontSize(9);
+                        doc.setTextColor(79, 70, 229);
+                        doc.text("DESEMPEÑO:", 18, y);
+                        y += 6;
+
+                        doc.setFont("Helvetica", "normal");
                         doc.setTextColor(71, 85, 105);
-                        doc.text("Desglose de Criterios:", 18, y);
-                        y += 6;
+                        const desempenoKeys = ['creatividad', 'escenario', 'intensidad', 'imagen', 'entretenimiento'];
+                        desempenoKeys.forEach(critKey => {
+                            const critMeta = CRITERIA.find(c => c.id === critKey);
+                            const fullLabel = critMeta ? critMeta.label : critKey;
+                            const val = scoreObj.values?.[critKey];
+                            if (y > 275) { doc.addPage(); y = 20; }
+                            doc.text(`• ${fullLabel}: ${parseFloat(val || 0).toFixed(2)} pts`, 22, y);
+                            y += 6;
+                        });
 
-                        doc.setFont("Helvetica", "normal");
-                        if (scoreObj.values) {
-                            Object.keys(scoreObj.values).forEach(critKey => {
-                                const critMeta = CRITERIA.find(c => c.id === critKey);
-                                const fullLabel = critMeta ? critMeta.label : critKey;
-                                const val = scoreObj.values[critKey];
-                                if (y > 275) { doc.addPage(); y = 20; }
-                                doc.text(`• ${fullLabel}: ${parseFloat(val || 0).toFixed(2)} pts`, 22, y);
-                                y += 6;
-                            });
-                        }
-
+                        // Habilidades
                         y += 2;
-                        if (y > 265) { doc.addPage(); y = 20; }
+                        if (y > 250) { doc.addPage(); y = 20; }
                         doc.setFont("Helvetica", "bold");
-                        doc.text("Penalizaciones Aplicadas:", 18, y);
+                        doc.setTextColor(79, 70, 229);
+                        doc.text("HABILIDADES:", 18, y);
                         y += 6;
 
                         doc.setFont("Helvetica", "normal");
+                        doc.setTextColor(71, 85, 105);
+                        const habilidadesKeys = ['musicalidad', 'sincronizacion', 'ejecucion', 'dificultad', 'variedad'];
+                        habilidadesKeys.forEach(critKey => {
+                            const critMeta = CRITERIA.find(c => c.id === critKey);
+                            const fullLabel = critMeta ? critMeta.label : critKey;
+                            const val = scoreObj.values?.[critKey];
+                            if (y > 275) { doc.addPage(); y = 20; }
+                            doc.text(`• ${fullLabel}: ${parseFloat(val || 0).toFixed(2)} pts`, 22, y);
+                            y += 6;
+                        });
+
+                        // Penalizaciones
+                        y += 2;
+                        if (y > 250) { doc.addPage(); y = 20; }
+                        doc.setFont("Helvetica", "bold");
+                        doc.setTextColor(220, 38, 38);
+                        doc.text("PENALIZACIONES APLICADAS:", 18, y);
+                        y += 6;
+
+                        doc.setFont("Helvetica", "normal");
+                        doc.setTextColor(71, 85, 105);
                         const activeDeductions = scoreObj.deductions ? Object.keys(scoreObj.deductions).filter(k => scoreObj.deductions[k]) : [];
                         
                         if (activeDeductions.length === 0) {
@@ -467,57 +491,57 @@
             };
 
             if (view === 'login') return (
-                <div className="min-h-screen bg-slate-950 flex items-center justify-center p-6 text-white text-center">
-                    <div className="w-full max-w-md bg-slate-900 rounded-[3rem] p-12 shadow-2xl border border-slate-800 animate-in">
+                <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4 text-white text-center">
+                    <div className="w-full max-w-sm bg-slate-900 rounded-[2.5rem] p-8 sm:p-12 shadow-2xl border border-slate-800 animate-in mx-auto">
                         {LOGO_URL ? (
-                            <img src={LOGO_URL} alt="North Champions Logo" className="h-24 mx-auto mb-6 object-contain drop-shadow-md" onError={(e) => e.target.style.display = 'none'} />
+                            <img src={LOGO_URL} alt="North Champions Logo" className="h-20 mx-auto mb-6 object-contain drop-shadow-md" onError={(e) => e.target.style.display = 'none'} />
                         ) : (
                             <div className="bg-indigo-600 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-8 shadow-lg rotate-3"><Trophy size={32} /></div>
                         )}
                         <h1 className="text-2xl font-black uppercase tracking-tighter mb-1">North Champions</h1>
-                        <p className="text-indigo-400 font-bold text-[10px] uppercase tracking-widest mb-12">Acceso de Personal</p>
-                        <input type="password" placeholder="Contraseña" className="w-full bg-slate-800 border-2 border-slate-700 rounded-2xl p-5 mb-6 text-center text-2xl font-black outline-none focus:border-indigo-500 transition-all placeholder:text-slate-700" value={password} onChange={(e) => setPassword(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && handleLogin()} />
-                        <button onClick={handleLogin} className="w-full bg-indigo-600 hover:bg-indigo-500 py-5 rounded-2xl font-black text-lg active:scale-95 transition-all shadow-xl shadow-indigo-600/20 uppercase tracking-widest">INGRESAR</button>
+                        <p className="text-indigo-400 font-bold text-[10px] uppercase tracking-widest mb-10">Acceso de Personal</p>
+                        <input type="password" placeholder="Contraseña" className="w-full bg-slate-800 border-2 border-slate-700 rounded-2xl p-4 mb-6 text-center text-xl font-black outline-none focus:border-indigo-500 transition-all placeholder:text-slate-700" value={password} onChange={(e) => setPassword(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && handleLogin()} />
+                        <button onClick={handleLogin} className="w-full bg-indigo-600 hover:bg-indigo-500 py-4 rounded-2xl font-black text-base active:scale-95 transition-all shadow-xl shadow-indigo-600/20 uppercase tracking-widest">INGRESAR</button>
                     </div>
                 </div>
             );
 
             return (
                 <div className="min-h-screen bg-slate-50 text-slate-900 pb-10">
-                    <header className="bg-slate-950 text-white p-5 sticky top-0 z-50 shadow-xl flex justify-between items-center">
+                    <header className="bg-slate-950 text-white p-4 sticky top-0 z-50 shadow-xl flex justify-between items-center">
                         <div className="flex items-center gap-3">
                             {LOGO_URL ? (
-                                <img src={LOGO_URL} alt="Logo" className="h-10 w-auto object-contain" onError={(e) => e.target.style.display = 'none'} />
+                                <img src={LOGO_URL} alt="Logo" className="h-8 w-auto object-contain" onError={(e) => e.target.style.display = 'none'} />
                             ) : (
-                                <div className="bg-indigo-600 p-2 rounded-xl text-white"><Trophy size={20} /></div>
+                                <div className="bg-indigo-600 p-2 rounded-xl text-white"><Trophy size={18} /></div>
                             )}
                             <div className="flex flex-col">
-                                <span className="font-black text-lg tracking-tighter leading-none">NORTH CHAMPIONS</span>
-                                <span className="text-[10px] font-bold text-indigo-400 tracking-widest uppercase">Series 2026</span>
+                                <span className="font-black text-base tracking-tighter leading-none">NORTH CHAMPIONS</span>
+                                <span className="text-[9px] font-bold text-indigo-400 tracking-widest uppercase">Series 2026</span>
                             </div>
                         </div>
-                        <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-3">
                             <div className="hidden sm:flex flex-col items-end">
-                                <span className="text-[9px] font-black uppercase text-slate-500 leading-none mb-1">{currentUserData?.name}</span>
-                                <span className="text-[8px] font-black text-green-500 flex items-center gap-1 uppercase tracking-tighter"><Cloud size={10}/> Sistema Online</span>
+                                <span className="text-[9px] font-black uppercase text-slate-400 leading-none mb-1">{currentUserData?.name}</span>
+                                <span className="text-[8px] font-black text-green-500 flex items-center gap-1 uppercase tracking-tighter"><Cloud size={10}/> Online</span>
                             </div>
-                            <button onClick={() => { setView('login'); setSelectedParticipantForPDF(null); }} className="bg-slate-800 p-2.5 rounded-xl text-slate-400 hover:text-red-400 transition-colors"><LogOut size={20} /></button>
+                            <button onClick={() => { setView('login'); setSelectedParticipantForPDF(null); }} className="bg-slate-800 p-2 rounded-xl text-slate-400 hover:text-red-400 transition-colors"><LogOut size={18} /></button>
                         </div>
                     </header>
 
                     {message && (
-                        <div className={`fixed top-24 left-1/2 -translate-x-1/2 z-[100] px-8 py-3 rounded-full shadow-2xl font-black text-[10px] animate-in ${message.type === 'error' ? 'bg-red-600 text-white' : 'bg-indigo-600 text-white'}`}>{message.text.toUpperCase()}</div>
+                        <div className={`fixed top-20 left-1/2 -translate-x-1/2 z-[100] px-6 py-2.5 rounded-full shadow-2xl font-black text-[10px] animate-in ${message.type === 'error' ? 'bg-red-600 text-white' : 'bg-indigo-600 text-white'}`}>{message.text.toUpperCase()}</div>
                     )}
 
-                    <main className="max-w-2xl mx-auto p-5">
+                    <main className="max-w-xl mx-auto p-4 sm:p-5">
                         {view === 'categories' && (
-                            <div className="space-y-6 animate-in">
-                                <h2 className="text-xl font-black text-slate-800 flex items-center gap-3 px-2 uppercase tracking-tight leading-none">Categorías</h2>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div className="space-y-5 animate-in">
+                                <h2 className="text-lg font-black text-slate-800 flex items-center gap-3 px-1 uppercase tracking-tight leading-none">Categorías</h2>
+                                <div className="grid grid-cols-1 gap-3">
                                     {CATEGORIAS.map(cat => (
-                                        <button key={cat} onClick={() => { setSelectedCategory(cat); setView('groups'); }} className="bg-white p-6 rounded-[2rem] border-2 border-slate-100 shadow-sm flex justify-between items-center group active:scale-95 transition-all text-left">
-                                            <span className="text-lg font-black text-slate-700">{cat}</span>
-                                            <ChevronRight className="text-slate-200 group-hover:text-indigo-600" />
+                                        <button key={cat} onClick={() => { setSelectedCategory(cat); setView('groups'); }} className="bg-white p-5 rounded-2xl border-2 border-slate-100 shadow-sm flex justify-between items-center group active:scale-95 transition-all text-left">
+                                            <span className="text-base font-black text-slate-700">{cat}</span>
+                                            <ChevronRight className="text-slate-300 group-hover:text-indigo-600" size={20} />
                                         </button>
                                     ))}
                                 </div>
@@ -525,9 +549,9 @@
                         )}
 
                         {view === 'groups' && (
-                            <div className="space-y-6 animate-in">
-                                <button onClick={() => setView('categories')} className="flex items-center gap-2 text-indigo-600 font-black text-[10px] uppercase mb-4 tracking-widest"><ChevronLeft size={16}/> Volver</button>
-                                <h2 className="text-2xl font-black text-slate-800">División: <span className="text-indigo-600">{selectedCategory}</span></h2>
+                            <div className="space-y-5 animate-in">
+                                <button onClick={() => setView('categories')} className="flex items-center gap-2 text-indigo-600 font-black text-[10px] uppercase tracking-widest"><ChevronLeft size={16}/> Volver</button>
+                                <h2 className="text-xl font-black text-slate-800">División: <span className="text-indigo-600">{selectedCategory}</span></h2>
                                 <div className="space-y-3">
                                     {participants.filter(p => p.category === selectedCategory).map(p => {
                                         const voted = scores.find(s => s.participantId === p.id && s.jurorId === currentUserData?.id);
@@ -543,50 +567,50 @@
                                                 setFormDeductions(voted?.deductions || {}); 
                                                 setAudioBase64(voted?.audioNote && voted?.audioNote.startsWith("data:audio") ? voted.audioNote : null);
                                                 setView('form'); 
-                                            }} className={`w-full p-6 rounded-3xl flex justify-between items-center border-2 transition-all ${voted ? 'bg-indigo-50 border-indigo-200' : 'bg-white border-slate-100 shadow-sm'}`}>
-                                                <div className="text-left font-black text-xl text-slate-800">{p.name} {voted && <div className="text-[9px] font-black text-indigo-600 uppercase mt-1 flex items-center gap-1"><CheckCircle2 size={12}/> Listo</div>}</div>
-                                                <ChevronRight className="text-slate-200" />
+                                            }} className={`w-full p-5 rounded-2xl flex justify-between items-center border-2 transition-all ${voted ? 'bg-indigo-50 border-indigo-200' : 'bg-white border-slate-100 shadow-sm'}`}>
+                                                <div className="text-left font-black text-lg text-slate-800">{p.name} {voted && <div className="text-[9px] font-black text-indigo-600 uppercase mt-0.5 flex items-center gap-1"><CheckCircle2 size={12}/> Votado</div>}</div>
+                                                <ChevronRight className="text-slate-300" size={20} />
                                             </button>
                                         );
                                     })}
-                                    {participants.filter(p => p.category === selectedCategory).length === 0 && <div className="p-16 text-center bg-white rounded-[3rem] border-2 border-dashed border-slate-200 text-slate-400 font-bold uppercase text-[10px]">Sin competidores todavía</div>}
+                                    {participants.filter(p => p.category === selectedCategory).length === 0 && <div className="p-12 text-center bg-white rounded-3xl border-2 border-dashed border-slate-200 text-slate-400 font-bold uppercase text-[10px]">Sin competidores todavía</div>}
                                 </div>
                             </div>
                         )}
 
                         {view === 'form' && selectedGroup && (
-                            <div className="space-y-8 animate-in">
-                                <button onClick={() => setView('groups')} className="flex items-center gap-2 text-indigo-600 font-black text-[10px] uppercase mb-6"><ChevronLeft size={16}/> Atrás</button>
-                                <div className="bg-white rounded-[3rem] shadow-2xl overflow-hidden border border-slate-200">
-                                    <div className="bg-slate-950 p-8 text-white relative">
-                                        <div className="text-[9px] font-black text-indigo-500 uppercase tracking-widest mb-1">{selectedGroup.category}</div>
-                                        <h2 className="text-3xl font-black tracking-tighter leading-none">{selectedGroup.name}</h2>
+                            <div className="space-y-6 animate-in">
+                                <button onClick={() => setView('groups')} className="flex items-center gap-2 text-indigo-600 font-black text-[10px] uppercase tracking-widest"><ChevronLeft size={16}/> Atrás</button>
+                                <div className="bg-white rounded-[2.5rem] shadow-xl overflow-hidden border border-slate-200">
+                                    <div className="bg-slate-950 p-6 text-white relative">
+                                        <div className="text-[9px] font-black text-indigo-400 uppercase tracking-widest mb-1">{selectedGroup.category}</div>
+                                        <h2 className="text-2xl font-black tracking-tight leading-none">{selectedGroup.name}</h2>
                                     </div>
-                                    <div className="p-8 space-y-12">
+                                    <div className="p-5 sm:p-8 space-y-8">
                                         {['Desempeño', 'Habilidades'].map(section => (
-                                            <div key={section} className="space-y-6">
-                                                <h3 className="text-[9px] font-black uppercase text-slate-400 tracking-[0.5em] border-b border-slate-50 pb-2">{section}</h3>
+                                            <div key={section} className="space-y-4">
+                                                <h3 className="text-[9px] font-black uppercase text-slate-400 tracking-[0.4em] border-b border-slate-100 pb-2">{section}</h3>
                                                 {CRITERIA.filter(c => section === c.section).map(c => {
                                                     const rawValue = formScores[c.id];
                                                     const parsedVal = parseFloat(rawValue);
                                                     const isSet = rawValue !== undefined && rawValue !== null && rawValue !== "" && !isNaN(parsedVal);
                                                     return (
-                                                        <div key={c.id} className="space-y-4 bg-slate-50/50 p-5 rounded-3xl border border-slate-100">
+                                                        <div key={c.id} className="space-y-3 bg-slate-50/70 p-4 rounded-2xl border border-slate-100">
                                                             <div className="flex justify-between items-center">
-                                                                <label className="text-sm font-black text-slate-700 block tracking-tight leading-tight">{c.label}</label>
-                                                                <span className="text-2xl font-black text-indigo-600 tabular-nums">
+                                                                <label className="text-xs font-black text-slate-700 block pr-2 leading-tight">{c.label}</label>
+                                                                <span className="text-xl font-black text-indigo-600 tabular-nums">
                                                                     {isSet ? parsedVal.toFixed(2) : "0.00"}
                                                                 </span>
                                                             </div>
                                                             
-                                                            <div className="flex items-center gap-3">
+                                                            <div className="flex items-center gap-2">
                                                                 <button 
                                                                     type="button"
                                                                     onClick={() => {
                                                                         const current = isSet ? parsedVal : 0.00;
                                                                         handleValueChange(c.id, current - 0.01);
                                                                     }}
-                                                                    className="bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 w-12 h-12 rounded-2xl flex items-center justify-center font-black text-2xl shadow-sm active:scale-95 transition-all select-none"
+                                                                    className="bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 w-11 h-11 rounded-xl flex items-center justify-center font-black text-xl shadow-sm active:scale-95 transition-all select-none"
                                                                 >
                                                                     -
                                                                 </button>
@@ -629,7 +653,7 @@
                                                                             handleValueChange(c.id, parseFloat(raw));
                                                                         }
                                                                     }}
-                                                                    className="flex-1 bg-white border-2 border-slate-200 rounded-2xl h-12 text-center font-black text-2xl text-slate-800 focus:border-indigo-500 outline-none transition-all"
+                                                                    className="flex-1 bg-white border-2 border-slate-200 rounded-xl h-11 text-center font-black text-xl text-slate-800 focus:border-indigo-500 outline-none transition-all"
                                                                 />
                                                                 
                                                                 <button 
@@ -638,7 +662,7 @@
                                                                         const current = isSet ? parsedVal : 0.00;
                                                                         handleValueChange(c.id, current + 0.01);
                                                                     }}
-                                                                    className="bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 w-12 h-12 rounded-2xl flex items-center justify-center font-black text-2xl shadow-sm active:scale-95 transition-all select-none"
+                                                                    className="bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 w-11 h-11 rounded-xl flex items-center justify-center font-black text-xl shadow-sm active:scale-95 transition-all select-none"
                                                                 >
                                                                     +
                                                                 </button>
@@ -649,17 +673,17 @@
                                             </div>
                                         ))}
 
-                                        <div className="bg-red-50/40 p-6 rounded-[2.5rem] border border-red-100 space-y-5">
-                                            <h3 className="text-[9px] font-black uppercase text-red-500 tracking-[0.5em] flex items-center gap-2"><MinusCircle size={14}/> Penalizaciones</h3>
+                                        <div className="bg-red-50/50 p-5 rounded-3xl border border-red-100 space-y-4">
+                                            <h3 className="text-[9px] font-black uppercase text-red-500 tracking-[0.4em] flex items-center gap-2"><MinusCircle size={14}/> Penalizaciones</h3>
                                             <div className="space-y-2">
                                                 {DEDUCTIONS_LIST.map(d => (
                                                     <button 
                                                         key={d.id} 
                                                         type="button"
                                                         onClick={() => toggleDeduction(d.id)} 
-                                                        className={`w-full p-4 rounded-2xl flex justify-between items-center transition-all border ${formDeductions[d.id] ? 'bg-red-600 text-white border-red-700 shadow-md' : 'bg-white text-slate-600 border-slate-200'}`}
+                                                        className={`w-full p-3.5 rounded-2xl flex justify-between items-center transition-all border ${formDeductions[d.id] ? 'bg-red-600 text-white border-red-700 shadow-md' : 'bg-white text-slate-600 border-slate-200'}`}
                                                     >
-                                                        <span className="text-[11px] font-bold text-left pr-4 leading-tight">{d.label}</span>
+                                                        <span className="text-[11px] font-bold text-left pr-3 leading-tight">{d.label}</span>
                                                         <span className={`text-[10px] font-black ${formDeductions[d.id] ? 'text-white' : 'text-red-500'}`}>-{d.value.toFixed(2)}</span>
                                                     </button>
                                                 ))}
@@ -667,14 +691,14 @@
                                         </div>
 
                                         {/* Audio Recorder */}
-                                        <div className="bg-slate-900 text-white p-6 rounded-[2.5rem] space-y-4 shadow-xl">
+                                        <div className="bg-slate-900 text-white p-5 rounded-3xl space-y-3 shadow-xl">
                                             <div className="flex justify-between items-center">
-                                                <span className="text-[10px] font-black uppercase tracking-[0.25em] text-indigo-400 flex items-center gap-2">
+                                                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-400 flex items-center gap-2">
                                                     <Mic size={14}/> Nota de Voz (Opcional)
                                                 </span>
                                                 {isRecording && (
-                                                    <span className="text-[10px] font-black text-red-400 animate-pulse flex items-center gap-1 uppercase">
-                                                        ● Grabando ({Math.floor(recordingTime / 60)}:{String(recordingTime % 60).padStart(2, '0')})
+                                                    <span className="text-[10px] font-black text-red-400 animate-pulse uppercase">
+                                                        ● {Math.floor(recordingTime / 60)}:{String(recordingTime % 60).padStart(2, '0')}
                                                     </span>
                                                 )}
                                             </div>
@@ -683,9 +707,9 @@
                                                 <button
                                                     type="button"
                                                     onClick={startRecording}
-                                                    className="w-full bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white py-4 rounded-2xl font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 active:scale-95 transition-all"
+                                                    className="w-full bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white py-3.5 rounded-xl font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 active:scale-95 transition-all"
                                                 >
-                                                    <Mic size={18} className="text-indigo-400" /> Grabar Comentario
+                                                    <Mic size={16} className="text-indigo-400" /> Grabar Comentario
                                                 </button>
                                             )}
 
@@ -693,15 +717,15 @@
                                                 <button
                                                     type="button"
                                                     onClick={stopRecording}
-                                                    className="w-full bg-red-600 hover:bg-red-500 text-white py-4 rounded-2xl font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 active:scale-95 transition-all shadow-lg shadow-red-600/30"
+                                                    className="w-full bg-red-600 hover:bg-red-500 text-white py-3.5 rounded-xl font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 active:scale-95 transition-all shadow-lg"
                                                 >
-                                                    <Square size={18} /> Detener Grabación
+                                                    <Square size={16} /> Detener Grabación
                                                 </button>
                                             )}
 
                                             {audioBase64 && !isRecording && (
-                                                <div className="space-y-3 bg-slate-800 p-4 rounded-2xl border border-slate-700">
-                                                    <audio src={audioBase64} controls className="w-full h-10 rounded-xl" />
+                                                <div className="space-y-2 bg-slate-800 p-3 rounded-xl border border-slate-700">
+                                                    <audio src={audioBase64} controls className="w-full h-9 rounded-lg" />
                                                     <button
                                                         type="button"
                                                         onClick={discardAudio}
@@ -713,19 +737,19 @@
                                             )}
                                         </div>
 
-                                        <div className="pt-8 border-t sticky bottom-0 bg-white pb-4 z-10">
-                                            <div className="space-y-1 mb-6 px-1">
+                                        <div className="pt-6 border-t sticky bottom-0 bg-white pb-3 z-10">
+                                            <div className="space-y-1 mb-5 px-1">
                                                 <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest text-slate-400"><span>Puntaje Base</span><span>{totals.base.toFixed(2)} / 20.00</span></div>
                                                 <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest text-red-500/70"><span>Penalizaciones</span><span>-{totals.deductions.toFixed(2)}</span></div>
-                                                <div className="flex justify-between items-end mt-4 pt-3 border-t border-slate-100">
+                                                <div className="flex justify-between items-end mt-3 pt-2 border-t border-slate-100">
                                                     <span className="font-black text-slate-400 uppercase text-[10px] tracking-widest">Total</span>
-                                                    <span className="text-6xl font-black text-indigo-600 tabular-nums leading-none tracking-tighter">{totals.final.toFixed(2)}</span>
+                                                    <span className="text-5xl font-black text-indigo-600 tabular-nums leading-none tracking-tighter">{totals.final.toFixed(2)}</span>
                                                 </div>
                                             </div>
                                             <button 
                                                 disabled={isFormIncomplete || isSubmitting} 
                                                 onClick={() => saveScore(scores.some(s => s.participantId === selectedGroup.id && s.jurorId === currentUserData?.id))} 
-                                                className={`w-full py-6 rounded-[2rem] font-black text-xl shadow-xl transition-all uppercase tracking-widest ${isFormIncomplete || isSubmitting ? 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none' : 'bg-indigo-600 text-white active:scale-95'}`}
+                                                className={`w-full py-5 rounded-2xl font-black text-lg shadow-xl transition-all uppercase tracking-widest ${isFormIncomplete || isSubmitting ? 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none' : 'bg-indigo-600 text-white active:scale-95'}`}
                                             >
                                                 {isSubmitting ? 'GUARDANDO...' : 'ENVIAR VOTO'}
                                             </button>
@@ -736,31 +760,31 @@
                         )}
 
                         {view === 'success' && (
-                            <div className="py-20 text-center animate-in zoom-in">
-                                <div className="bg-green-100 text-green-600 w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-8 shadow-inner shadow-green-200/50"><CheckCircle2 size={56} /></div>
-                                <h2 className="text-4xl font-black text-slate-900 mb-2 tracking-tight uppercase">¡Enviado!</h2>
-                                <div className="bg-white p-10 rounded-[3.5rem] shadow-2xl border border-amber-100 w-full max-w-sm mx-auto mt-10">
-                                    <div className="text-6xl font-black text-amber-500 mb-2 tabular-nums tracking-tighter">{timerRemaining}s</div>
-                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-10">Ventana de corrección</p>
-                                    <button onClick={() => setView('form')} className="w-full bg-amber-500 text-white py-5 rounded-2xl font-black text-lg active:scale-95 uppercase shadow-xl shadow-amber-500/20">EDITAR</button>
-                                    <button onClick={() => { setView('categories'); setSelectedGroup(null); }} className="w-full mt-6 text-slate-400 font-black text-[10px] uppercase">Finalizar ahora</button>
+                            <div className="py-16 text-center animate-in zoom-in">
+                                <div className="bg-green-100 text-green-600 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner"><CheckCircle2 size={48} /></div>
+                                <h2 className="text-3xl font-black text-slate-900 mb-1 uppercase tracking-tight">¡Enviado!</h2>
+                                <div className="bg-white p-8 rounded-[2.5rem] shadow-xl border border-amber-100 w-full max-w-xs mx-auto mt-8">
+                                    <div className="text-5xl font-black text-amber-500 mb-2 tabular-nums tracking-tighter">{timerRemaining}s</div>
+                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-8">Ventana de corrección</p>
+                                    <button onClick={() => setView('form')} className="w-full bg-amber-500 text-white py-4 rounded-xl font-black text-base active:scale-95 uppercase shadow-lg shadow-amber-500/20">EDITAR</button>
+                                    <button onClick={() => { setView('categories'); setSelectedGroup(null); }} className="w-full mt-4 text-slate-400 font-black text-[10px] uppercase">Finalizar ahora</button>
                                 </div>
                             </div>
                         )}
 
                         {view === 'admin' && !selectedParticipantForPDF && (
-                            <div className="space-y-12 pb-20 animate-in">
-                                <div className="bg-white p-8 rounded-[3rem] border border-slate-200 shadow-xl space-y-8">
-                                    <div className="flex items-center gap-3 border-b border-slate-50 pb-4">
-                                        <div className="bg-indigo-50 p-3 rounded-2xl text-indigo-600"><UserPlus size={24}/></div>
-                                        <h3 className="text-xl font-black tracking-tight uppercase leading-none">Gestión de Competidores</h3>
+                            <div className="space-y-10 pb-20 animate-in">
+                                <div className="bg-white p-6 sm:p-8 rounded-[2.5rem] border border-slate-200 shadow-xl space-y-6">
+                                    <div className="flex items-center gap-3 border-b border-slate-100 pb-3">
+                                        <div className="bg-indigo-50 p-2.5 rounded-2xl text-indigo-600"><UserPlus size={22}/></div>
+                                        <h3 className="text-lg font-black tracking-tight uppercase leading-none">Gestión de Competidores</h3>
                                     </div>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                        <div className="space-y-4">
-                                            <h4 className="text-[10px] font-black uppercase text-indigo-500 tracking-widest flex items-center gap-2"><Plus size={14}/> Individual</h4>
-                                            <div className="space-y-3">
-                                                <input type="text" placeholder="Nombre" className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl p-4 font-bold outline-none focus:border-indigo-500 transition-all" value={newParticipantName} onChange={(e) => setNewParticipantName(e.target.value)} />
-                                                <select className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl p-4 font-bold outline-none appearance-none cursor-pointer" value={currentCategory} onChange={(e) => setCurrentCategory(e.target.value)}>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div className="space-y-3">
+                                            <h4 className="text-[10px] font-black uppercase text-indigo-500 tracking-widest flex items-center gap-1.5"><Plus size={14}/> Individual</h4>
+                                            <div className="space-y-2.5">
+                                                <input type="text" placeholder="Nombre" className="w-full bg-slate-50 border-2 border-slate-100 rounded-xl p-3.5 font-bold outline-none focus:border-indigo-500 transition-all text-sm" value={newParticipantName} onChange={(e) => setNewParticipantName(e.target.value)} />
+                                                <select className="w-full bg-slate-50 border-2 border-slate-100 rounded-xl p-3.5 font-bold outline-none appearance-none cursor-pointer text-sm" value={currentCategory} onChange={(e) => setCurrentCategory(e.target.value)}>
                                                     {CATEGORIAS.map(c => <option key={c} value={c}>{c}</option>)}
                                                 </select>
                                                 <button onClick={async () => {
@@ -768,13 +792,13 @@
                                                     await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'participants'), { name: newParticipantName.trim(), category: currentCategory, createdAt: Date.now() });
                                                     setNewParticipantName('');
                                                     showMessage('Participante registrado');
-                                                }} className="w-full bg-indigo-600 text-white py-4 rounded-2xl font-black uppercase tracking-widest active:scale-95 transition-all shadow-lg shadow-indigo-600/10">Agregar</button>
+                                                }} className="w-full bg-indigo-600 text-white py-3.5 rounded-xl font-black uppercase text-xs tracking-widest active:scale-95 transition-all shadow-lg shadow-indigo-600/10">Agregar</button>
                                             </div>
                                         </div>
-                                        <div className="space-y-4">
-                                            <h4 className="text-[10px] font-black uppercase text-indigo-500 tracking-widest flex items-center gap-2"><ClipboardList size={14}/> Carga Masiva</h4>
-                                            <div className="space-y-3">
-                                                <textarea placeholder="Un nombre por línea..." className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl p-4 font-bold outline-none h-[116px] resize-none text-xs" value={bulkList} onChange={(e) => setBulkList(e.target.value)} />
+                                        <div className="space-y-3">
+                                            <h4 className="text-[10px] font-black uppercase text-indigo-500 tracking-widest flex items-center gap-1.5"><ClipboardList size={14}/> Carga Masiva</h4>
+                                            <div className="space-y-2.5">
+                                                <textarea placeholder="Un nombre por línea..." className="w-full bg-slate-50 border-2 border-slate-100 rounded-xl p-3.5 font-bold outline-none h-[112px] resize-none text-xs" value={bulkList} onChange={(e) => setBulkList(e.target.value)} />
                                                 <button onClick={async () => {
                                                     if (!bulkList.trim()) return;
                                                     const names = bulkList.split('\n').map(n => n.trim()).filter(n => n.length > 0);
@@ -786,21 +810,21 @@
                                                     await batch.commit();
                                                     setBulkList('');
                                                     showMessage(`${names.length} sincronizados`);
-                                                }} className="w-full bg-slate-900 text-white py-4 rounded-2xl font-black uppercase tracking-widest active:scale-95 flex items-center justify-center gap-2">
-                                                    <UploadCloud size={18}/> PROCESAR
+                                                }} className="w-full bg-slate-900 text-white py-3.5 rounded-xl font-black uppercase text-xs tracking-widest active:scale-95 flex items-center justify-center gap-2">
+                                                    <UploadCloud size={16}/> PROCESAR
                                                 </button>
                                             </div>
                                         </div>
                                     </div>
-                                    <div className="mt-6 border-t border-slate-50 pt-6">
-                                        <h4 className="text-[10px] font-black uppercase text-slate-400 mb-4 px-2 tracking-widest">Base de Datos ({participants.length})</h4>
-                                        <div className="max-h-60 overflow-y-auto space-y-2 pr-2">
+                                    <div className="mt-4 border-t border-slate-100 pt-5">
+                                        <h4 className="text-[10px] font-black uppercase text-slate-400 mb-3 px-1 tracking-widest">Base de Datos ({participants.length})</h4>
+                                        <div className="max-h-52 overflow-y-auto space-y-2 pr-1">
                                             {participants.sort((a,b) => b.createdAt - a.createdAt).map(p => (
-                                                <div key={p.id} className="flex justify-between items-center bg-slate-50 p-4 rounded-2xl border border-slate-100">
-                                                    <div><div className="font-bold text-slate-800 leading-none mb-1">{p.name}</div><div className="text-[9px] font-black text-indigo-500 uppercase tracking-tighter">{p.category}</div></div>
+                                                <div key={p.id} className="flex justify-between items-center bg-slate-50 p-3.5 rounded-2xl border border-slate-100">
+                                                    <div><div className="font-bold text-slate-800 text-sm leading-none mb-1">{p.name}</div><div className="text-[9px] font-black text-indigo-500 uppercase tracking-tighter">{p.category}</div></div>
                                                     <div className="flex items-center gap-2">
                                                         <button onClick={() => setSelectedParticipantForPDF(p)} className="bg-indigo-50 text-indigo-600 hover:bg-indigo-100 px-3 py-2 rounded-xl text-xs font-black uppercase flex items-center gap-1 transition-colors"><FileText size={14}/> Ver PDF</button>
-                                                        <button onClick={async () => await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'participants', p.id))} className="text-slate-300 hover:text-red-600 transition-colors p-2"><Trash2 size={18} /></button>
+                                                        <button onClick={async () => await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'participants', p.id))} className="text-slate-300 hover:text-red-600 transition-colors p-2"><Trash2 size={16} /></button>
                                                     </div>
                                                 </div>
                                             ))}
@@ -809,9 +833,9 @@
                                 </div>
 
                                 {/* Podio General & Ranking Completo */}
-                                <div className="space-y-8 pb-10">
-                                    <h2 className="text-4xl font-black tracking-tighter flex items-center gap-4 border-b border-slate-200 pb-8 px-2 uppercase leading-none">
-                                        <BarChart3 className="text-indigo-600" size={40} /> Podio y Ranking (Suma Total)
+                                <div className="space-y-6 pb-10">
+                                    <h2 className="text-2xl sm:text-3xl font-black tracking-tighter flex items-center gap-3 border-b border-slate-200 pb-6 px-1 uppercase leading-none">
+                                        <BarChart3 className="text-indigo-600" size={32} /> Podio y Ranking
                                     </h2>
                                     {CATEGORIAS.map(cat => {
                                         const catParticipants = participants.filter(p => p.category === cat);
@@ -823,28 +847,28 @@
                                         const isExpanded = expandedCategories[cat];
 
                                         return (
-                                            <div key={cat} className="space-y-5 bg-white p-8 rounded-[3rem] border border-slate-200 shadow-xl animate-in">
-                                                <div className="flex justify-between items-center border-b border-slate-100 pb-4">
+                                            <div key={cat} className="space-y-4 bg-white p-6 sm:p-8 rounded-[2.5rem] border border-slate-200 shadow-xl animate-in">
+                                                <div className="flex justify-between items-center border-b border-slate-100 pb-3">
                                                     <h3 className="text-xs font-black text-indigo-600 uppercase tracking-[0.3em]">{cat}</h3>
                                                     <span className="text-[10px] font-bold text-slate-400">{catParticipants.length} Competidores</span>
                                                 </div>
 
-                                                <div className="space-y-4">
+                                                <div className="space-y-3">
                                                     {top3.map((p, idx) => (
-                                                        <div key={p.id} className="bg-slate-50 p-6 rounded-[2rem] border border-slate-100 flex items-center gap-5">
-                                                            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black text-xl text-white shadow-md ${idx === 0 ? 'bg-amber-400' : idx === 1 ? 'bg-slate-400' : 'bg-amber-700'}`}>
+                                                        <div key={p.id} className="bg-slate-50 p-5 rounded-2xl border border-slate-100 flex items-center gap-4">
+                                                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-lg text-white shadow-md ${idx === 0 ? 'bg-amber-400' : idx === 1 ? 'bg-slate-400' : 'bg-amber-700'}`}>
                                                                 {idx + 1}
                                                             </div>
                                                             <div className="flex-1">
-                                                                <div className="font-black text-xl text-slate-800 uppercase leading-tight mb-1">{p.name}</div>
+                                                                <div className="font-black text-lg text-slate-800 uppercase leading-tight mb-0.5">{p.name}</div>
                                                                 <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{scores.filter(s => s.participantId === p.id).length} Jurados calificados</div>
                                                             </div>
-                                                            <div className="flex items-center gap-3">
-                                                                <div className="text-right bg-white px-5 py-2.5 rounded-2xl border border-slate-200">
-                                                                    <div className="text-2xl font-black text-indigo-600 leading-none mb-1 tabular-nums">{p.totalSum.toFixed(2)}</div>
-                                                                    <div className="text-[8px] font-black text-slate-400 uppercase tracking-widest leading-none">Suma Total</div>
+                                                            <div className="flex items-center gap-2.5">
+                                                                <div className="text-right bg-white px-4 py-2 rounded-xl border border-slate-200">
+                                                                    <div className="text-xl font-black text-indigo-600 leading-none mb-0.5 tabular-nums">{p.totalSum.toFixed(2)}</div>
+                                                                    <div className="text-[8px] font-black text-slate-400 uppercase tracking-widest leading-none">Total</div>
                                                                 </div>
-                                                                <button onClick={() => setSelectedParticipantForPDF(p)} className="bg-indigo-50 text-indigo-600 hover:bg-indigo-100 p-3 rounded-2xl font-black transition-colors" title="Ver Reporte PDF"><FileText size={18}/></button>
+                                                                <button onClick={() => setSelectedParticipantForPDF(p)} className="bg-indigo-50 text-indigo-600 hover:bg-indigo-100 p-2.5 rounded-xl font-black transition-colors" title="Ver Reporte PDF"><FileText size={16}/></button>
                                                             </div>
                                                         </div>
                                                     ))}
@@ -854,26 +878,26 @@
                                                     <div className="pt-2">
                                                         <button 
                                                             onClick={() => toggleCategoryAccordion(cat)}
-                                                            className="w-full bg-slate-900 hover:bg-slate-800 text-white py-4 px-6 rounded-2xl font-black text-xs uppercase tracking-widest flex justify-between items-center transition-all shadow-md"
+                                                            className="w-full bg-slate-900 hover:bg-slate-800 text-white py-3.5 px-5 rounded-xl font-black text-xs uppercase tracking-widest flex justify-between items-center transition-all shadow-md"
                                                         >
-                                                            <span>{isExpanded ? 'Ocultar resto del ranking' : `Ver ${rest.length} competidores siguientes en el ranking`}</span>
+                                                            <span>{isExpanded ? 'Ocultar resto del ranking' : `Ver ${rest.length} competidores siguientes`}</span>
                                                             <ChevronDown className={`transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`} size={16} />
                                                         </button>
 
                                                         {isExpanded && (
-                                                            <div className="mt-4 space-y-3 pt-2 animate-in">
+                                                            <div className="mt-3 space-y-2.5 pt-1 animate-in">
                                                                 {rest.map((p, rIdx) => (
-                                                                    <div key={p.id} className="bg-slate-50/70 p-5 rounded-2xl border border-slate-100 flex items-center justify-between">
-                                                                        <div className="flex items-center gap-4">
-                                                                            <span className="font-mono font-black text-slate-400 text-sm">#{rIdx + 4}</span>
+                                                                    <div key={p.id} className="bg-slate-50/70 p-4 rounded-xl border border-slate-100 flex items-center justify-between">
+                                                                        <div className="flex items-center gap-3">
+                                                                            <span className="font-mono font-black text-slate-400 text-xs">#{rIdx + 4}</span>
                                                                             <div>
-                                                                                <div className="font-bold text-slate-800 uppercase text-sm leading-none mb-1">{p.name}</div>
+                                                                                <div className="font-bold text-slate-800 uppercase text-xs leading-none mb-1">{p.name}</div>
                                                                                 <div className="text-[9px] text-slate-400 uppercase tracking-wider">{scores.filter(s => s.participantId === p.id).length} jueces</div>
                                                                             </div>
                                                                         </div>
-                                                                        <div className="flex items-center gap-3">
-                                                                            <span className="font-black text-indigo-600 text-lg tabular-nums">{p.totalSum.toFixed(2)}</span>
-                                                                            <button onClick={() => setSelectedParticipantForPDF(p)} className="bg-white text-indigo-600 hover:bg-indigo-50 p-2.5 rounded-xl border border-slate-200 transition-colors" title="Ver Reporte PDF"><FileText size={16}/></button>
+                                                                        <div className="flex items-center gap-2.5">
+                                                                            <span className="font-black text-indigo-600 text-base tabular-nums">{p.totalSum.toFixed(2)}</span>
+                                                                            <button onClick={() => setSelectedParticipantForPDF(p)} className="bg-white text-indigo-600 hover:bg-indigo-50 p-2 rounded-lg border border-slate-200 transition-colors" title="Ver Reporte PDF"><FileText size={14}/></button>
                                                                         </div>
                                                                     </div>
                                                                 ))}
@@ -889,44 +913,44 @@
                         )}
 
                         {view === 'admin' && selectedParticipantForPDF && (
-                            <div className="space-y-6 animate-in pb-20">
-                                <div className="flex items-center justify-between bg-white px-6 py-4 rounded-2xl border border-slate-200 shadow-sm">
-                                    <button onClick={() => setSelectedParticipantForPDF(null)} className="flex items-center gap-2 text-indigo-600 font-black text-xs uppercase tracking-widest hover:text-indigo-800 transition-colors">
-                                        <ChevronLeft size={18} /> Volver al panel
+                            <div className="space-y-5 animate-in pb-20">
+                                <div className="flex items-center justify-between bg-white px-5 py-3.5 rounded-2xl border border-slate-200 shadow-sm">
+                                    <button onClick={() => setSelectedParticipantForPDF(null)} className="flex items-center gap-1.5 text-indigo-600 font-black text-xs uppercase tracking-widest hover:text-indigo-800 transition-colors">
+                                        <ChevronLeft size={16} /> Volver
                                     </button>
                                     <button 
                                         onClick={() => downloadPDFFile(selectedParticipantForPDF)} 
-                                        className="bg-indigo-600 hover:bg-indigo-500 text-white px-5 py-3 rounded-xl text-xs font-black uppercase tracking-widest flex items-center gap-2 shadow-lg shadow-indigo-600/20 active:scale-95 transition-all"
+                                        className="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest flex items-center gap-1.5 shadow-lg shadow-indigo-600/20 active:scale-95 transition-all"
                                     >
-                                        <Download size={16} /> Guardar PDF Local
+                                        <Download size={14} /> Guardar PDF
                                     </button>
                                 </div>
 
-                                <div className="bg-white p-8 rounded-[3rem] border border-slate-200 shadow-xl space-y-6">
-                                    <div className="border-b border-slate-100 pb-6">
+                                <div className="bg-white p-6 sm:p-8 rounded-[2.5rem] border border-slate-200 shadow-xl space-y-6">
+                                    <div className="border-b border-slate-100 pb-5">
                                         <div className="text-[10px] font-black text-indigo-500 uppercase tracking-widest mb-1">{selectedParticipantForPDF.category}</div>
-                                        <h2 className="text-3xl font-black text-slate-900 tracking-tight uppercase">{selectedParticipantForPDF.name}</h2>
+                                        <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight uppercase">{selectedParticipantForPDF.name}</h2>
                                         <p className="text-xs font-bold text-slate-500 mt-1">Suma Total Acumulada: <span className="text-indigo-600 font-black text-base">{getTotalScoreSum(selectedParticipantForPDF.id).toFixed(2)} pts</span></p>
                                     </div>
 
                                     <div className="space-y-6">
                                         {scores.filter(s => s.participantId === selectedParticipantForPDF.id).length === 0 ? (
-                                            <div className="p-12 text-center text-slate-400 font-bold uppercase text-xs">Este participante aún no tiene calificaciones registradas.</div>
+                                            <div className="p-10 text-center text-slate-400 font-bold uppercase text-xs">Este participante aún no tiene calificaciones registradas.</div>
                                         ) : (
                                             scores.filter(s => s.participantId === selectedParticipantForPDF.id).map(scoreObj => (
-                                                <div key={scoreObj.id} className="bg-slate-50 p-6 rounded-3xl border border-slate-100 space-y-4">
+                                                <div key={scoreObj.id} className="bg-slate-50 p-5 rounded-3xl border border-slate-100 space-y-4">
                                                     <div className="flex justify-between items-center border-b border-slate-200 pb-3">
                                                         <span className="font-black text-slate-800 uppercase text-sm">{scoreObj.jurorName}</span>
                                                         <span className="font-black text-indigo-600 text-base">Subtotal: {scoreObj.total.toFixed(2)}</span>
                                                     </div>
 
-                                                    <div className="space-y-2">
-                                                        <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider block">Criterios de Calificación:</span>
+                                                    <div className="space-y-3">
+                                                        <span className="text-[10px] font-black uppercase text-indigo-600 tracking-wider block">Desempeño:</span>
                                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                                            {scoreObj.values && Object.keys(scoreObj.values).map(critKey => {
+                                                            {['creatividad', 'escenario', 'intensidad', 'imagen', 'entretenimiento'].map(critKey => {
                                                                 const critMeta = CRITERIA.find(c => c.id === critKey);
                                                                 const fullLabel = critMeta ? critMeta.label : critKey;
-                                                                const val = scoreObj.values[critKey];
+                                                                const val = scoreObj.values?.[critKey];
                                                                 return (
                                                                     <div key={critKey} className="bg-white p-3 rounded-xl border border-slate-200 flex justify-between items-center text-xs">
                                                                         <span className="font-bold text-slate-700 pr-2">{fullLabel}</span>
@@ -937,7 +961,24 @@
                                                         </div>
                                                     </div>
 
-                                                    <div className="space-y-2 pt-2">
+                                                    <div className="space-y-3 pt-1">
+                                                        <span className="text-[10px] font-black uppercase text-indigo-600 tracking-wider block">Habilidades:</span>
+                                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                                            {['musicalidad', 'sincronizacion', 'ejecucion', 'dificultad', 'variedad'].map(critKey => {
+                                                                const critMeta = CRITERIA.find(c => c.id === critKey);
+                                                                const fullLabel = critMeta ? critMeta.label : critKey;
+                                                                const val = scoreObj.values?.[critKey];
+                                                                return (
+                                                                    <div key={critKey} className="bg-white p-3 rounded-xl border border-slate-200 flex justify-between items-center text-xs">
+                                                                        <span className="font-bold text-slate-700 pr-2">{fullLabel}</span>
+                                                                        <span className="font-black text-indigo-600">{parseFloat(val || 0).toFixed(2)}</span>
+                                                                    </div>
+                                                                );
+                                                            })}
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="space-y-2 pt-1">
                                                         <span className="text-[10px] font-black uppercase text-red-500 tracking-wider block">Penalizaciones Aplicadas:</span>
                                                         <div className="space-y-1">
                                                             {scoreObj.deductions && Object.keys(scoreObj.deductions).filter(k => scoreObj.deductions[k]).length > 0 ? (
